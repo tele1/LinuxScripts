@@ -26,22 +26,20 @@ LICENCE="GPL v3: https://www.gnu.org/licenses/gpl.html "
 #       mate-terminal -e 'bash ./script'
 #=======================================================
 
+
+DEBUG="OFF"
+
+
 DEBUG()
 {
-    DEBUG="ON"
     if [[ "$DEBUG" == "ON" ]] ; then
         echo -e "${BL}Line in script:  DEBUG $1 ${NC}"
     fi
 }
 
+
 [ "$(id -u)" != "0" ] && { echo -e "${RC}Script working only from root.${NC}"; exit; }
 
-HIDE="YES"
-[ "$1" == "--debug" ] && HIDE="NO"
-HIDE_INFO()
-{
-[ "$HIDE" == "NO" ] &&  $@
-}
 
 NC='\e[0m'    # Reset Color
 GC='\e[0;32m' # Green ECHO
@@ -83,7 +81,8 @@ case $1 in
 	;;
 	"") 
 	;;
-	"--debug") 
+	"--debug")
+        DEBUG="ON" 
 	;;
 	*)
 		echo "	Error: unknown option"		
