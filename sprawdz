@@ -1,0 +1,485 @@
+#!/bin/bash
+
+VERSION="1"
+LICENCE="GPL v3: https://www.gnu.org/licenses/gpl.html "
+
+# INFO: Script to help DETECT MALICIOUS ACTIONS and SYSTEM WEAKNESSES.
+#
+# "       Script requires linux knowledge."
+#        "You should also read the script commands to improve them in the future."
+#        "If you don't know something, you have to increase own knowledge."
+#
+#   WARNING: - Output this script can be big.
+#            - Part of the result could have been shortened.
+#
+#   TIPS:
+#         1. You can remove "l" from "grep -Ril" command if you want see more details.
+#         2. You can comment on unnecessary lines for you, 
+#             just paste # at the beginning of the selected line.
+#            Or add to new function and add description.
+#            Or just remove.
+#         3. You can create log from terminal like:  bash ./this.script > your.log 
+#   
+#   Notes:
+#   - for crontab examples:
+#       xterm -hold -e "bash ./script"
+#       mate-terminal -e 'bash ./script'
+#=======================================================
+
+DEBUG()
+{
+    DEBUG="ON"
+    if [[ "$DEBUG" == "ON" ]] ; then
+        echo -e "${BL}Line in script:  DEBUG $1 ${NC}"
+    fi
+}
+
+[ "$(id -u)" != "0" ] && { echo -e "${RC}Script working only from root.${NC}"; exit; }
+
+HIDE="YES"
+[ "$1" == "--debug" ] && HIDE="NO"
+HIDE_INFO()
+{
+[ "$HIDE" == "NO" ] &&  $@
+}
+
+NC='\e[0m'    # Reset Color
+GC='\e[0;32m' # Green ECHO
+BL='\e[0;36m' # Cyan ECHO
+#RC='\e[0;31m' # Red ECHO
+
+GREEN_ECHO()
+{
+	 echo -e "${GC}$@${NC}"  
+}
+
+
+WRITE()
+{
+    [ -z "$1" ] && echo "Error: empty option for WRITE function."
+    WW=$(echo "$SS" | sed '/^$/d' | wc -l)
+    [[ $WW -ne 0 ]] && echo " "
+    [[ $WW -ne 0 ]] && GREEN_ECHO "$@"
+    [[ $WW -ne 0 ]] && echo "$SS"
+}
+
+
+BLINK_START='\033[5m '
+BLINK_END='\033[0m '
+
+
+case $1 in
+	"--help"|"-h")
+		echo "---------------------------------------------------------"
+		echo "usage: $0 --option"
+		echo " "
+		echo " Options:"
+		echo "       --debug       Show degug lines."
+		echo "   -h  --help        Show this help."
+		echo " "
+		echo "  More info about script you can find inside script."
+		echo "---------------------------------------------------------"
+		exit 0
+	;;
+	"") 
+	;;
+	"--debug") 
+	;;
+	*)
+		echo "	Error: unknown option"		
+		echo "	Try use: $0 --help"
+		exit 0
+	;;
+esac
+
+
+
+#============= BEGIN =============#
+# Info: https://blueteamblog.com/10-ways-to-detect-malicious-actions-within-a-linux-environment-using-siem
+
+#  "Inspection: sshd"
+# You should check only sshd log | but this check all
+SS=$(grep -Ril --color=auto  'unexpected internal error\|unknown or unsupported key type\|invalid certificate signing key\|invalid elliptic curve value\|incorrect signature\|error in libcrypto\|unexpected bytes remain after decoding\|fatal: buffer_get_string: bad string\|Local: crc32 compensation attack\|bad client public DH value\|Corrupted MAC on input' /var/log/*log)
+    WRITE  "Inspection: sshd"
+DEBUG 1000 #_________________________________________________#
+
+
+# "Inspection:  vsftp"
+# vsftpD errors
+SS=$(grep -Ril --color=auto  'Connection refused: too many sessions for this address\|Connection refused: tcp_wrappers denial\|Bad HTTP verb\|port and pasv both active\|pasv and port both active\|Transfer done (but failed to open directory)\|Could not set file modification time\|bug: pid active in ptrace_sandbox_free\|PTRACE_SETOPTIONS failure\|weird status:\|couldn’t handle sandbox event\|syscall * out of bounds\|syscall not permitted:\|syscall validate failed:\|Input line too long\|poor buffer accounting in str_netfd_alloc\|vsf_sysutil_read_loop' /var/log/*log)
+    WRITE   "Inspection:  vsftp"
+DEBUG 1001 #_________________________________________________#
+
+
+# "Inspection:  bash"
+SS=$(grep -Ril --color=auto 'rm *bash_history\|echo “” > *bash_history\|cat /dev/null > *bash_history\|ln -sf /dev/null *bash_history\|truncate -s0 *bash_history\|export HISTFILESIZE=0\|history -c\|history -w\|shred *bash_history' /var/log/*log)
+    WRITE   "Inspection:  bash"
+DEBUG 1002 #_________________________________________________#
+
+
+# "Inspection:  other commands"
+SS=$(grep -Ril --color=auto 'wget * - http* | perl\|wget * - http* | sh\|wget * - http* | bash\|python -m SimpleHTTPServer\|-m http.server\|import pty; pty.spawn*\|socat exec:*\|socat -O /tmp/*\|socat tcp-connect*\|*echo binary >>*\|*wget *; chmod +x*\|*wget *; chmod 777 *\|*cd /tmp || cd /var/run || cd /mnt*\|*stop;service iptables stop;*\|*stop;SuSEfirewall2 stop;*\|chmod 777 2020*\|*>>/etc/rc.local\|*base64 -d /tmp/*\|* | base64 -d *\|*/chmod u+s *\|*chmod +s /tmp/*\|*chmod u+s /tmp/*\|* /tmp/haxhax*\|* /tmp/ns_sploit*\|nc -l -p *\|cp /bin/ksh *\|cp /bin/sh *\|* /tmp/*.b64 *\|*/tmp/ysocereal.jar*\|*/tmp/x *\|*; chmod +x /tmp/*\|*;chmod +x /tmp/*' /var/log/*log)
+    WRITE   "Inspection:  other commands"
+DEBUG 1003 #_________________________________________________#
+
+
+# "Inspection:  failed or failure word in logs"
+SS=$(grep -Ril --color=auto 'Failed\|Failure' /var/log/*log)
+    WRITE   "Inspection:  failed or failure word in logs"
+DEBUG 1004 #_________________________________________________#
+
+
+#### Audit ###########################################################{
+[ "$(which audit)" ] || SS=$(echo "Sorry, audit not installed.")
+[ "$(which audit)" ] && SS=$(grep -Ril --color=auto 'chmod\|chown' /var/log/audit)
+    WRITE   "Inspection:  chmod or chown from /var/log/audit"
+DEBUG 1005 #_________________________________________________#
+
+
+[ "$(which audit)" ] && SS=$(aureport -au -i --failed |  grep $(date "+%m/.*/%Y"))
+    WRITE   "Inspection:  failed audit from this month"
+DEBUG 1006 #_________________________________________________#
+
+
+## https://www.digitalocean.com/community/tutorials/how-to-use-the-linux-auditing-system-on-centos-7
+
+[ "$(which audit)" ] && SS=$(aureport -x --summary ; aureport --failed ; aureport -f -i --summary)
+    WRITE "Audit Summary Report."
+DEBUG 1006.1 #_________________________________________________#
+#### Audit #########################################################}
+
+
+# "Inspection:  bad login attempts"
+SS=$(cat /var/log/btmp)
+    WRITE   "Inspection:  bad login attempts"
+DEBUG 1007 #_________________________________________________#
+
+
+# "Inspection:  buffer overflow in logs"
+SS=$(grep -Ril --color=auto 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' /var/log/*log)
+    WRITE   "Inspection:  buffer overflow in logs"
+DEBUG 1008 #_________________________________________________#
+
+
+#==========================================================
+# Info: https://www.cyberciti.biz/tips/linux-security.html"
+
+
+# "Inspection:  Accounts With Empty Passwords:"
+SS=$(awk -F: '($2 == "") {print}' /etc/shadow)
+    WRITE   "Inspection:  Accounts With Empty Passwords:"
+DEBUG 1009 #_________________________________________________#
+
+
+SS=$(awk -F: '($3 == "0") {print}' /etc/passwd | sed 's/root\:x\:0\:0\:root\:\/root\:\/bin\/bash//' | awk 'NF')
+## grep -v "root:x:0:0:root:/root:/bin/bash"
+    WRITE   "Inspection:  Non-Root Accounts With UID Set To 0:"
+DEBUG 1010 #_________________________________________________#
+
+#  List Active Init Services:
+[ "$(which chkconfig)" ] && SS=$(chkconfig --list | grep '3:on')
+[ "$(which chkconfig)" ] &&     WRITE   "List Active Init Services:"
+DEBUG 1011 #_________________________________________________#
+
+
+SS=$(find / \( -perm -4000 -o -perm -2000 \) -print  2>/dev/null)
+    WRITE   "Inspection:  Unwanted SUID and SGID"
+DEBUG 1012 #_________________________________________________#
+
+
+        echo -ne "${BLINK_START} Inspection Progress... ${BLINK_END}  \r"
+#FAST GREEN_ECHO "	No owner Files"
+SS=$(find / -xdev \( -nouser -o -nogroup \) -print)
+    WRITE   "Inspection:  No owner Files:"
+        echo -ne "                                                     \r"
+DEBUG 1013 #_________________________________________________#
+
+
+# "Inspection: listening ports"
+SS=$(netstat -tulpn | grep "LISTEN")
+# Info:
+#  *:*        -->  Any IP and any port traffic
+#  :::*       -->  Any IPv6 address and any port traffic
+#  0.0.0.0:*  -->  Any IPv4 address and any port traffic
+##  nmap -sT -O localhost # other way
+    WRITE   "Inspection:  listening ports:"
+DEBUG 1014 #_________________________________________________#
+
+
+# "Inspection: world-writable files"
+# Info: https://www.linuxquestions.org/questions/linux-software-2/what-is-gvfs-weird-directory-entry-4175477518/
+SS=$(find / -xdev -type d \( -perm -0002 -a ! -perm -1000 \) -print 2>&1 | grep -v "/home/.*/.gvfs.: Permission denied")
+    WRITE   "Inspection:  world-writable files:"
+DEBUG 1015 #_________________________________________________#
+
+
+
+#  https://www.thegeekdiary.com/how-to-allow-only-specific-non-root-users-to-use-crontab/
+#  https://stackoverflow.com/questions/134906/how-do-i-list-all-cron-jobs-for-all-users
+
+SS=$(for user in $(cut -f1 -d: /etc/passwd); do CC=$(crontab -u $user -l) ; EE=$( sed '/^$/d' "$CC" | wc -l) ; \
+[[ $EE -ne 0 ]] && echo -e "$user \n${CC}" ; done 2>/dev/null)
+    WRITE   "Inspection:  Users cron jobs list:"
+
+[ -f "/etc/cron.allow" ] && GREEN_ECHO "File /etc/cron.allow"
+[ -f "/etc/cron.allow" ] && cat /etc/cron.allow
+
+[ $(which cron) ] && echo " "
+[ $(which cron) ] && ls -lA /etc/cron.*/
+[ $(which cron) ] && echo " "
+
+[ "$(which systemctl)" ] && GREEN_ECHO "Timers from systemd unit files:"
+[ "$(which systemctl)" ] && systemctl list-timers 2>/dev/null | grep ':'
+
+PRINT_SYSTEMD_TIMERS_PATHS()
+{
+LIST=$(systemctl list-timers | awk '{print $NF}' | sed '1d' | tac | sed '1d;2d;3d'| tac)
+while IFS= read ; do
+    grep "Exec" /lib/systemd/system/"$REPLY"
+done  <<< "$LIST"
+}
+[ "$(which systemctl)" ] && echo " "
+[ "$(which systemctl)" ] && PRINT_SYSTEMD_TIMERS_PATHS
+DEBUG 1016 #==========================================================
+#https://nfsec.pl/security/6237
+
+
+SS=$(ls -alR /proc/*/cwd 2> /dev/null | grep --color=auto 'tmp\|shm')
+    WRITE   "Inspection:  write rights for /tmp or /dev/shm :"
+DEBUG 1017 #_________________________________________________#
+
+
+
+SS=$(ls -alR /proc/*/exe 2> /dev/null | grep deleted)
+    WRITE   "Inspection:  process that is running but a binary file has been deleted :"
+DEBUG 1018 #_________________________________________________#
+
+
+SS=$(ls -Alap /bin | grep "\. \|\.\.." | grep -v '../')
+    WRITE   "Inspection:  try find suspicious files:"
+DEBUG 1019 #_________________________________________________#
+
+        echo -ne "${BLINK_START} Inspection Progress... ${BLINK_END}  \r"
+SS=$(lsattr / -R 2> /dev/null | grep "\----i")
+    WRITE   "Inspection:  find files with bit of immutability:"
+        echo -ne "                                                     \r"
+DEBUG 1020 #_________________________________________________#
+
+
+#SS=$(find / -name ".*" -exec file -p '{}' \; | grep ELF)
+#    WRITE   "Inspection:  find a strange elf:"
+DEBUG 1021 #_________________________________________________#
+
+
+SS=$(ls -al /var/log | grep '[[:blank:]]0[[:blank:]]' | grep -v btmp)
+    WRITE   "Inspection:  find logs with 0 bytes in length:"
+DEBUG 1022 #_________________________________________________#
+
+
+
+SS=$(utmpdump /var/run/utmp | tr -d ' ' | grep '\[\]'  | grep -v '\[LOGIN\]\[tty1\]' | sed '1d')
+    WRITE   "Inspection:  find strange blank records in /var/run/utmp:"
+DEBUG 1023 #_________________________________________________#
+
+
+# "Track exploits."
+SS=$(egrep -irl '(chr\(|system\()|(curl|wget|chmod|gcc|perl)%20' /var/log/*)
+    WRITE   "Inspection:  Track exploits 1."
+DEBUG 1024 #  "___________________________________"
+
+
+##  https://www.webhostingtalk.com/showthread.php?t=607247
+SS=$(for x in "/dev/shm /tmp /usr/local/apache/proxy /var/spool /var/tmp"; do ls -loAFR $x 2>&- | grep -E "^$|^/| apache | nobody | unknown | www | web " | grep -E "^$|^/|/$|\*$|\.pl$" | grep -Ev "^$|^/"  ; done;)
+    WRITE   "Inspection:  Track exploits 2."
+DEBUG 1025 #  "___________________________________"
+
+
+SS=$(locate access | grep "\.log\|_log")
+    WRITE   "Inspection:  Track exploits 3. Access logs"
+DEBUG 1026 #  "___________________________________"
+
+
+SS=$(echo "$(locate "..." ; locate ".." ; locate " ." ; locate ". ")" | sort | uniq)
+    WRITE   "Inspection:  Track exploits 4. Strange file names."
+DEBUG 1027 #  "___________________________________"
+
+# Warn: I used more portable command for Ubuntu, because output also contains UID:
+#  https://unix.stackexchange.com/questions/474996/bash-script-to-remotely-collect-hostname-ip-and-host-total-memory
+SS=$(grep -ril "$(ip route get 1 | sed -nE 's/.* src ([0-9.]+).*/\1/p')" /var/log/*)
+    WRITE   "Inspection:  IP in logs."
+
+DEBUG 1028 #  "___________________________________"
+
+
+SS=$(grep -ri "/x90/" /var/log/*)
+    WRITE   "Inspection:  Search for Shell Code."
+DEBUG 1029 #  "___________________________________"
+
+#######################################
+# INFO
+
+SS=$(ps -eo %cpu,%mem,pid,ppid,cmd,user | sort -k 1 -r | head -5)
+    WRITE   "Top CPU usage:"
+DEBUG 1030 #  "___________________________________"
+
+
+SS=$(ps -eo %cpu,%mem,pid,ppid,cmd,user | sort -k 2 -r | head -5)
+    WRITE   "Top Memory usage:"
+DEBUG 1031 #  "___________________________________"
+
+
+SS=$(netstat -tupn)
+    WRITE   "Active connections:"
+DEBUG 1032 #   "___________________________________"
+
+
+SS=$(ifconfig)
+    WRITE  "Network info:"
+DEBUG 1033 #   "___________________________________"
+#######################################
+
+#  https://www.pluralsight.com/blog/it-ops/linux-hardening-secure-server-checklist
+#FAST GREEN_ECHO "	Sysctl.conf settings:"
+#GREEN_ECHO "- Disable the IP Forwarding"
+#	grep "net.ipv4.ip_forward" /etc/sysctl.conf
+#GREEN_ECHO "- Disable the Send Packet Redirects"
+#	grep "net.ipv4.conf.all.send_redirects" /etc/sysctl.conf
+#	grep "net.ipv4.conf.default.send_redirects" /etc/sysctl.conf
+#GREEN_ECHO "- Disable ICMP Redirect Acceptance"
+#	grep "net.ipv4.conf.all.accept_redirects" /etc/sysctl.conf
+#	grep "net.ipv4.conf.default.accept_redirects" /etc/sysctl.conf
+#GREEN_ECHO "- Enable Bad Error Message Protection"
+#	grep "net.ipv4.icmp_ignore_bogus_error_responses" /etc/sysctl.conf
+DEBUG 1034 #   "___________________________________"
+
+
+#  https://www.pluralsight.com/blog/it-ops/linux-hardening-secure-server-checklist
+SS=$([ -f "/etc/pam.d/system-auth" ] && [ "$(grep "cracklib" /etc/pam.d/system-auth)" ] || echo "cracklib - not found")
+    WRITE  "PAM module"
+[ -f "/etc/pam.d/system-auth" ] && [ "$(grep "auth        required      pam_env.so" /etc/pam.d/system-auth)" ] || echo "pam_env.so - not found"
+#[ "$(grep -E 'auth.*required.*pam_deny.so' /etc/pam.d/system-auth)" ] || echo "pam_env.so - not found" 
+DEBUG 1035 #   "___________________________________"
+
+
+SS=$(cat /etc/security/limits.conf | grep -v ^"#")
+    WRITE  "Limits.conf:"
+DEBUG 1036 #  "___________________________________"
+
+
+SS=$(ps axo user=,pid=,stat=,comm= | grep Z)
+    WRITE  "Zombie process:"
+ps axo pid=,stat= | awk '$2~/^Z/ { print $1 }' | xargs -L1 pstree -sg
+DEBUG 1037 # "___________________________________"
+
+#=============================================
+
+## https://unix.stackexchange.com/questions/502693/smartctl-reports-overall-health-test-as-passed-but-the-tests-failed
+SS=$([ "$(which smartmontools)" ] || echo "Sorry, smartmontools not installed.")
+    WRITE "- Hard drive health status:"
+## smartctl -l error /dev/...
+[ "$(which smartmontools)" ] && for drive in $(lsblk -d -o NAME | grep -v NAME) ; do echo " Drive $drive";smartctl -H /dev/"$drive" | grep "result" ;done
+DEBUG 1038 # "___________________________________"
+
+
+SS=$(sensors)
+    WRITE "Sensors:"
+DEBUG 1039 # "___________________________________"
+
+
+SS=$(lsof  | grep "txt" | grep "REG" | awk '{print $1,"|", $NF}' | sort | uniq)
+    WRITE "Part open files:"
+DEBUG 1040 # "___________________________________"
+
+
+SS=$(lsof -i)
+    WRITE "Files Associated with Internet Connections and Protocols"
+DEBUG 1041 # "___________________________________"
+
+
+SS=$([ "$(which iostat)" ] || echo "Sorry, iostat not installed.")
+    WRITE "System input/output"
+[ "$(which iostat)" ] && iostat
+DEBUG 1042 # "___________________________________"
+
+
+## https://www.cyberciti.biz/tips/find-alert-warning-error-messages-in-logfile.html
+SS=$(grep -il "error\|warn\|fail" /var/log/*.log)
+    WRITE  "Errors, warnings, fail:"
+DEBUG 1043 # "___________________________________"
+
+
+SS=""
+[ "$(which rpm)" ] && SS=$(rpm -qa --last | head)
+#  other way: rpm -qa --qf '%{INSTALLTIME} (%{INSTALLTIME:date}): %{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort -n
+#  expac is for Arch Linux
+[ "$(which expac)" ] && SS=$(expac --timefmt='%Y-%m-%d %T' '%l\t%n' | sort | tail -n 10)
+[ "$(which dpkg)" ] && SS=$(grep " install " /var/log/dpkg.log.1)
+    WRITE "Last installed packages:"
+DEBUG 1044 # "___________________________________"
+
+
+## http://ftp.rpm.org/max-rpm/s1-rpm-verify-output.html
+## https://www.novell.com/coolsolutions/feature/16238.html
+SS=$([ "$(which rpm)" ] && rpm -Va)
+    WRITE  "Verify all RPM Packages"
+DEBUG 1045 # "___________________________________"
+
+
+[ "$(which rpmorhan)" ] || SS=$(echo "Sorry, rpmorhan not installed.")
+[ "$(which rpmorhan)" ] && SS=$(rpmorphan -guess-all)
+    WRITE "Find \"orphaned\" packages on your system."
+DEBUG 1046 # "___________________________________"
+
+
+## https://www.debian.org/doc/manuals/securing-debian-howto/ch4.en.html
+## http://www.pc-freak.net/blog/how-to-make-sure-your-linux-system-users-wont-hide-or-delete-their-bash_history-securing-bash_history-file/
+SS=$(head /var/log/auth.log)
+    WRITE "auth.log."
+DEBUG 1047 # "___________________________________"
+
+
+## https://www.cyberciti.biz/tips/howto-log-user-activity-using-process-accounting.html
+SS=$(ls -lart /)
+    WRITE "Last added or removed from the system."
+DEBUG 1048 # "___________________________________"
+
+
+## http://hacksecure007.blogspot.com/
+SS=$(lsattr -a ~)
+#lsattr /usr/sbin | less
+#lsattr /usr/bin | less
+#lsattr /bin | less
+#lsattr /sbin | less
+    WRITE "Linux second extended filesystem."
+DEBUG 1049 # "___________________________________"
+
+
+##  https://g0tpwn3d.blogspot.com/2012/11/linux-server-hacked.html
+SS=$(last)
+    WRITE  "Users that recently logged into the system."
+DEBUG 1050 # "___________________________________"
+
+
+SS=$(find ~ -type f -mtime -7 -exec ls -l {} \;)
+    WRITE  "Modified files last week in the home directory."
+DEBUG 1051 #  "___________________________________"
+
+
+SS=$(uptime ; w)
+    WRITE  "Time of uninterrupted computer operation."
+DEBUG 1052 # "___________________________________"
+
+
+SS=$(ls -al --author --time=access /tmp ; ls -al /var/tmp ; ls -al /dev/shm)
+    WRITE "Common Directories Where Web Exploits Are Found."
+DEBUG 1053 # "___________________________________"
+
+
+
+
+
+
+
+
+echo " "
+#============= END =============#
