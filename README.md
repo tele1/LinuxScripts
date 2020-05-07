@@ -4,4 +4,4 @@
 
 This section contains scripts for Linux.
 
-Most are written in Bash. https://www.gnu.org/software/bash/
+Most are written in Bash (unix shell). https://www.gnu.org/software/bash/
