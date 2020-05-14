@@ -2,6 +2,7 @@
 
 VERSION="1"
 LICENCE="GPL v3: https://www.gnu.org/licenses/gpl.html "
+SOURCE="https://github.com/tele1/LinuxScripts"
 
 # INFO: Script to help DETECT MALICIOUS ACTIONS and SYSTEM WEAKNESSES.
 #
