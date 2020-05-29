@@ -2,7 +2,7 @@
 
 
 # Destiny: 
-#			This for own website / blog on GitHub with Markdown. 
+#			This is for own website / blog on GitHub with Markdown. 
 #			This script show you broken links in README.md 
 #			or files .md which exists but are not included in README.md
 #
