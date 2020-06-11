@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1"
+VERSION="2"
 LICENCE="GPL v3: https://www.gnu.org/licenses/gpl.html "
 SOURCE="https://github.com/tele1/LinuxScripts"
 
@@ -474,9 +474,13 @@ SS=$(ls -al --author --time=access /tmp ; ls -al /var/tmp ; ls -al /dev/shm)
     WRITE "Common Directories Where Web Exploits Are Found."
 DEBUG 1053 # "___________________________________"
 
+SS=$(ps auxw | awk '{print $11,$2}' | grep ^\\[ | awk '{print $2}' | xargs -I % sh -c 'echo PID: %; cat /proc/%/maps' 2> /dev/null | grep '/')
+    WRITE "Detection of simulation of kernel processes v1."
+DEBUG 1054 # "___________________________________"
 
-
-
+SS=$(ps auxww | awk '{print $11,$2}' | grep ^\\[ | awk '{print $2}' | xargs -I % sh -c 'echo PID: %; sha1sum /proc/%/exe' 2> /dev/null | grep '/')
+    WRITE "Detection of simulation of kernel processes v2."
+DEBUG 1055 # "___________________________________"
 
 
 

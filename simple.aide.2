@@ -1,0 +1,308 @@
+#!/bin/bash
+
+
+# Description: Simple AIDE substitute.
+# Destiny: 
+#          This script is used to create a checksum database of system files
+#          to later determine whether a given file has been overwritten.
+#
+#	Licence:	GNU GPL v3
+#	Version:	5
+# 	Script use:
+#               bash ./script --help
+#
+######################################################
+######################################################{
+####  THIS PART YOU SHOULD CHECK AND ADAPT TO YOUR OWN NEEDS
+
+## PATH TO DATABASE
+PATH_DATABASE="/var/sas"
+
+
+FOR_SAS_CREATE_FUNCTION(){
+## 		For example: " -path '/cdrom' -prune -o " will skip search in /cdrom directory.
+## Be careful with edit option "prune", because sometimes it may not work,
+##		working example from "man find": find . -path ./src/emacs -prune -o -print.
+
+
+NUMBER=0
+while IFS= read -r LINE1 ; do
+	if [[ "$PROBRESS_BAR" == "ON" ]] ; then
+		((NUMBER++))
+		printf "\rProgress: $NUMBER :: $LINE1"
+	else
+		echo "File: $LINE1"
+	fi
+done < <(find / \
+\
+-path '/cdrom' -prune -o  \
+-path '/dev'   -prune -o  \
+-path '/home'  -prune -o  \
+-path '/media' -prune -o  \
+-path '/mnt'   -prune -o  \
+-path '/proc'  -prune -o  \
+-path '/run'   -prune -o  \
+-path '/sys'   -prune -o  \
+-path '/tmp'   -prune -o  \
+-path '/var'   -prune -o  \
+\
+-path '/usr'   -prune -o  \
+-path '/sbin'   -prune -o  \
+-path '/lib'   -prune -o  \
+\
+-type f  -print | tee -a  "${PATH_DATABASE}/path.base")
+
+echo "Find files finished"
+
+## Examples:
+## Command not will work inside ""
+## Hash Algoritm not will work when "find" give you dirs (openssl: system library:fread:Is a directory)
+}
+
+PROBRESS_BAR=ON
+######################################################}
+######################################################
+
+# Check root running
+[[ $EUID -ne 0 ]] && echo -e "'\e[0;31m' This script must be run as root. '\e[0m'" && exit 1
+
+#===={
+error1(){
+echo "$@" ; exit 1
+}
+
+# Check if sha256sum is installed
+[ "$(sha256sum --version)" ] || error1 "--> You need install coreutils for sha256sum"
+# Check if sha256sum is installed
+[ "$(cksum --version)" ] || error1 "--> You need install coreutils for cksum"
+#====}
+
+#======{
+ProgressBar(){
+####  Use:	ProgressBar  ${number} ${end}
+
+# Process data
+	let PROGRESS=(${1}*100/${2}*100)/100
+	let DONE=(${PROGRESS}*4)/10
+	let LEFT=40-$DONE
+	# Fuse if lines is more than 100% (it allows you force to run a progressbar even if the value is incorrect, only useful when you estimate the time)
+	[[ "$DONE" -gt "40" ]] && DONE=40
+	[[ "$LEFT" -lt "0" ]] && LEFT=0
+# Build progressbar string lengths
+    FILL=$(printf "%${DONE}s")
+    EMPTY=$(printf "%${LEFT}s")
+
+# Progress : [########################################] 100%
+printf "\rProgress : [${FILL// /▇}${EMPTY// /-}] ${PROGRESS}%% / ${1} / ${2}"
+}
+#======}
+
+
+#=========================================={
+sas_verify(){
+	reset
+	[ ! -e ${PATH_DATABASE}/hash.${ALG_NAME}.base.org ] && error1 "--> Old hash base not exist ${PATH_DATABASE}/hash.${ALG_NAME}.base.org"
+	[ ! -e ${PATH_DATABASE}/perm.${ALG_NAME}.base.org ] && error1 "--> Old perm base not exist ${PATH_DATABASE}/perm.${ALG_NAME}.base.org"
+#echo "--> Verify base with local hash"
+#sha256sum -c ${PATH_DATABASE}/hash.base.org.sum || error1 "--> Error: Verify hash.base.org FAILED"
+#sha256sum -c ${PATH_DATABASE}/perm.base.org.sum || error1 "--> Error: Verify perm.base.org FAILED"
+#### change diff to comm ?
+    echo "########################################" | tee -a ${PATH_DATABASE}/sas.log
+	echo "	$(date +"%R  %d d. %m m. %Y y.")	"   | tee -a ${PATH_DATABASE}/sas.log
+	echo "--> Changed files:"                       | tee -a ${PATH_DATABASE}/sas.log
+	echo "    "                                     | tee -a ${PATH_DATABASE}/sas.log
+	diff ${PATH_DATABASE}/hash.${ALG_NAME}.base ${PATH_DATABASE}/hash.${ALG_NAME}.base.org   2>&1 | tee -a ${PATH_DATABASE}/sas.log
+	diff ${PATH_DATABASE}/perm.${ALG_NAME}.base ${PATH_DATABASE}/perm.${ALG_NAME}.base.org   2>&1 | tee -a ${PATH_DATABASE}/sas.log
+
+
+ADDITIONAL_VERIFICATION_HASH_V1(){
+#### YOU NEED CHECK THIS AND ADAPT TO YOUR OWN NEEDS
+echo "=========={"
+echo "--> Verify base with on-line hash"
+## tr -d '\r' will remove "CRLF line terminators"
+curl -v --silent https://pastebin.com/paste_own_link --stderr - | grep " ${PATH_DATABASE}/hash.base.org" | sed -e 's/<[^>]*.//g' | tr -d '\r' \
+| sha256sum --check || error1 "--> Error: Verify hash.base.org FAILED"
+curl -v --silent https://pastebin.com/paste_own_link --stderr - | grep " ${PATH_DATABASE}/perm.base.org" | sed -e 's/<[^>]*.//g' | tr -d '\r' \
+| sha256sum --check || error1 "--> Error: Verify perm.base.org FAILED"
+echo "==========}"
+}
+
+ADDITIONAL_VERIFICATION_HASH_V2(){
+echo "=========={"
+echo "--> Paste hash of hash.base.org to verify and click Enter key:"
+read -p "hash.base.org=" HASH_OF_HASH
+echo "$HASH_OF_HASH" | sha256sum --check || error1 "--> Error: Verify hash.base.org FAILED"
+
+echo "--> Paste hash of perm.base.org to verify and click Enter key:"
+read -p "perm.base.org=" HASH_OF_PERM
+echo "$HASH_OF_PERM" | sha256sum --check || error1 "--> Error: Verify perm.base.org FAILED"
+echo "==========}"
+}
+
+#### Remove " # " to active below function.
+#### Warning: This code need update.
+# ADDITIONAL_VERIFICATION_HASH_V1
+# ADDITIONAL_VERIFICATION_HASH_V2
+}
+#==========================================}
+
+#========================={
+choose_alg() {
+##  CHECK SECURITY: https://en.wikipedia.org/wiki/Secure_hash_algorithms
+##                  https://en.wikipedia.org/wiki/Hash_function_security_summary
+    echo " "
+    echo "--> Available Algorithms / Cryptographic Hash Functions:"
+    echo " "
+	[ -z "$(which cksum)" ]     && echo "INFO: cksum not available / not installed in your system."  \
+		|| echo "1. cksum (CRC -> It is for error-detecting code, commonly used in digital networks - eg.0m1.651s)"
+	[ -z "$(which sha256sum)" ] && echo "INFO: sha256sum not available / is not installed in your system." || echo "2. sha256sum (SHA256 -> eg.0m1.798s)"
+	# Available OpenSSL Cryptographic Hash Functions :$ openssl list -digest-commands
+	if [ ! -z "$(which openssl)" ] ; then
+		openssl list -digest-commands | grep -q sha3-224 || echo "INFO: Sorry, your openssl not support sha3-224 so it can't be used." 
+		openssl list -digest-commands | grep -q sha3-224 && echo "3. sha3-224 (eg. ...)"
+		openssl list -digest-commands | grep -q blake2s256 || echo "INFO: Sorry, your openssl not support blake2s256 so it can't be used." 
+		openssl list -digest-commands | grep -q blake2s256 && echo "4. blake2s256 -> (BLAKE2 -> eg. ...)"
+	else
+		echo "INFO: openssl not installed in your system, so \" sha3 blake2 \" hash functions from openssl are not available." 
+	fi
+    echo " "
+
+    	read -p "--> Write a number to choose:" branch_alg
+		case "$branch_alg" in
+        1 ) ALGORITHM="cksum" ; ALG_NAME="CRC" ;;
+        2 ) ALGORITHM="sha256sum" ; ALG_NAME="SHA256" ;;
+        3 ) ALGORITHM="openssl dgst -sha3-224" ; ALG_NAME="SHA3_224" ;;
+        4 ) ALGORITHM="openssl dgst -blake2s256" ; ALG_NAME="BLAKE2_256" ;;
+        * ) echo "###########################################"
+            echo "--> Incorrect number."
+            echo "###########################################"
+			exit ;;
+		esac
+}
+#=========================}
+
+#========================={
+sas_create() {
+if [[ ! -z "$1" ]]; then
+## If "--check" option from --help
+	echo $ALG_NAME
+	case "$ALG_NAME" in
+		CRC ) ALGORITHM="cksum" ;;
+        SHA256 ) ALGORITHM="sha256sum" ;;
+        SHA3_224 ) ALGORITHM="openssl dgst -sha3-224" ;;
+        BLAKE2_256 ) ALGORITHM="openssl dgst -blake2s256" ;;
+		* ) echo "###########################################"
+            echo "--> Error in detect ALG_NAME from path: ${PATH_DATABASE}/hash.*.base.org"
+            echo "###########################################"
+			exit ;;
+		esac
+	## Remove base, except base.org
+	rm ${PATH_DATABASE}/*base
+else
+## If "--first.init" option from --help
+	choose_alg
+	mkdir -pm 700 ${PATH_DATABASE}
+	[ "$(ls -ld ${PATH_DATABASE} | grep ^"drwx------" | grep "root root")" ] ||  error1 "--> Folder ${PATH_DATABASE} have too loose permissions or the owner is not root"
+	## Remove all base
+	COUNT_BASE_FILES=$(ls ${PATH_DATABASE}/*base* | wc -l)
+	[[ "$COUNT_BASE_FILES" -eq "0" ]] || rm ${PATH_DATABASE}/*base*
+fi
+
+echo "$ALGORITHM :: $ALG_NAME"
+
+# Create path base
+[ -e ${PATH_DATABASE}/path.base ] && rm ${PATH_DATABASE}/path.base
+FOR_SAS_CREATE_FUNCTION
+
+## Create hash base and perm base
+COUNT_PATH_BASE=$(wc -l "${PATH_DATABASE}/path.base" | awk '{print $1}')
+NUMBER=0
+while IFS= read -r LINE1 ; do
+	if [[ "$PROBRESS_BAR" == "ON" ]] ; then
+		${ALGORITHM} "$LINE1" >> ${PATH_DATABASE}/hash.${ALG_NAME}.base
+		ls -l "$LINE1" >> ${PATH_DATABASE}/perm.${ALG_NAME}.base
+		((NUMBER++))
+		#echo "${NUMBER} ${COUNT_PATH_BASE}"
+		ProgressBar ${NUMBER} ${COUNT_PATH_BASE}
+	else
+		${ALGORITHM} "$LINE1" | tee -a ${PATH_DATABASE}/hash.${ALG_NAME}.base
+		ls -l "$LINE1" | tee -a ${PATH_DATABASE}/perm.${ALG_NAME}.base
+	fi
+done < "${PATH_DATABASE}/path.base"
+}
+#=========================}
+
+
+#========================={
+sas_move() {
+[ -e ${PATH_DATABASE}/hash.${ALG_NAME}.base.org ] && rm ${PATH_DATABASE}/hash.${ALG_NAME}.base.org
+[ -e ${PATH_DATABASE}/perm.${ALG_NAME}.base.org ] && rm ${PATH_DATABASE}/perm.${ALG_NAME}.base.org
+mv ${PATH_DATABASE}/hash.${ALG_NAME}.base ${PATH_DATABASE}/hash.${ALG_NAME}.base.org
+mv ${PATH_DATABASE}/perm.${ALG_NAME}.base ${PATH_DATABASE}/perm.${ALG_NAME}.base.org
+
+echo " "
+echo "=========={"
+echo "OPTIONAL:"
+echo "--> You can sent additional hash to inaccessible place,"
+echo " for example on paste.bin, manualy"
+echo "and add links to this script or paste hash, during additional verification:"
+echo " "
+#echo "${ALGORITHM}"
+${ALGORITHM} ${PATH_DATABASE}/hash.${ALG_NAME}.base.org
+${ALGORITHM} ${PATH_DATABASE}/perm.${ALG_NAME}.base.org
+echo "==========}"
+}
+#=========================}
+
+
+
+#===============================================================================​=========={
+case $1 in
+    "--first.init"|"-f")
+        sas_create
+        sas_move
+    ;;
+    "--check"|"-c")
+		COUNT_HASH_FILES=$(ls "${PATH_DATABASE}/hash".*".base.org" | wc -l)
+		COUNT_PERM_FILES=$(ls "${PATH_DATABASE}/perm".*".base.org" | wc -l)
+			[ "$COUNT_HASH_FILES" -eq "1" ] || error1 "File hash.*.base.org not exist or is more than 1 in ${PATH_DATABASE} ."
+			[ "$COUNT_PERM_FILES" -eq "1" ] || error1 "File perm.*.base.org not exist or is more than 1 in ${PATH_DATABASE} ."
+		ALG_NAME=$(ls "${PATH_DATABASE}/hash".*".base.org" | sed -e "s/.*\/hash.//" -e "s/.base.org//")
+        sas_create "$ALG_NAME"
+        sas_verify
+    ;;
+    "--show")
+		[ -e ${PATH_DATABASE}/path.base ] || error1 "Your base .../path.base not exist."
+		cat "${PATH_DATABASE}/path.base" | awk -F '/' '{print "/" $2 "/"}' | uniq
+    ;;
+    "--log")
+		cat "${PATH_DATABASE}/sas.log"
+    ;;
+    "--help"|"-h")
+		echo " "
+		echo "Usage: $0 [OPTION]... "
+        echo " "
+        echo "--first.init  / -f      Option to create base of checksums."
+        echo "--check       / -c      Option to verify base."
+        echo " "
+        echo "--show                  If you have base, this show her main directories"
+        echo "--log                   Show log."
+        echo " "
+		echo "INFO:"
+        echo "	This software is used to verify changes in the system."
+		echo "	First you need create base of checksums ( --first.init ) ."
+		echo "	Then you can track your system changes  ( --check ) ."
+        echo " "
+        echo "WARNING: "
+        echo "	Because the length of the checksum is constant,"
+        echo "	regardless of the size of the file,"
+        echo "	with bigger file, exist higher risk "
+        echo "	of building the same checksum for the changed file (hash colision)."
+    ;;
+    *)
+        echo "    Error: unknown option"        
+        echo "    Try use: $0 --help  / -h"
+        exit
+    ;;
+esac
+#===============================================================================​==========}
