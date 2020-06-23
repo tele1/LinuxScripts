@@ -7,7 +7,7 @@
 #          to later determine whether a given file has been overwritten.
 #
 #	Licence:	GNU GPL v3
-#	Version:	5
+	VERSION="6"
 # 	Script use:
 #               bash ./script --help
 #
@@ -20,9 +20,11 @@ PATH_DATABASE="/var/sas"
 
 
 FOR_SAS_CREATE_FUNCTION(){
-## 		For example: " -path '/cdrom' -prune -o " will skip search in /cdrom directory.
-## Be careful with edit option "prune", because sometimes it may not work,
-##		working example from "man find": find . -path ./src/emacs -prune -o -print.
+## 		For example: 
+##  " -path '/cdrom' -prune -o " will skip search in /cdrom directory.
+##
+##          Be careful with edit option "prune", because sometimes it may not work,
+##		    working example from "man find": find . -path ./src/emacs -prune -o -print.
 
 
 NUMBER=0
@@ -46,11 +48,13 @@ done < <(find / \
 -path '/tmp'   -prune -o  \
 -path '/var'   -prune -o  \
 \
--path '/usr'   -prune -o  \
--path '/sbin'   -prune -o  \
--path '/lib'   -prune -o  \
 \
 -type f  -print | tee -a  "${PATH_DATABASE}/path.base")
+
+#-path '/usr'   -prune -o  \
+#-path '/sbin'  -prune -o  \
+#-path '/lib'   -prune -o  \
+
 
 echo "Find files finished"
 
@@ -59,7 +63,11 @@ echo "Find files finished"
 ## Hash Algoritm not will work when "find" give you dirs (openssl: system library:fread:Is a directory)
 }
 
+##  PROBRESS_BAR=ON or OFF
 PROBRESS_BAR=ON
+
+## your_user_name 
+USER_NAME=your_user_name
 ######################################################}
 ######################################################
 
@@ -103,16 +111,32 @@ sas_verify(){
 	reset
 	[ ! -e ${PATH_DATABASE}/hash.${ALG_NAME}.base.org ] && error1 "--> Old hash base not exist ${PATH_DATABASE}/hash.${ALG_NAME}.base.org"
 	[ ! -e ${PATH_DATABASE}/perm.${ALG_NAME}.base.org ] && error1 "--> Old perm base not exist ${PATH_DATABASE}/perm.${ALG_NAME}.base.org"
+	## Remove logs older than 30 days.
+	find ${PATH_DATABASE}/log/ -mtime +30 -exec rm -f {} \;
+
 #echo "--> Verify base with local hash"
 #sha256sum -c ${PATH_DATABASE}/hash.base.org.sum || error1 "--> Error: Verify hash.base.org FAILED"
 #sha256sum -c ${PATH_DATABASE}/perm.base.org.sum || error1 "--> Error: Verify perm.base.org FAILED"
-#### change diff to comm ?
-    echo "########################################" | tee -a ${PATH_DATABASE}/sas.log
-	echo "	$(date +"%R  %d d. %m m. %Y y.")	"   | tee -a ${PATH_DATABASE}/sas.log
-	echo "--> Changed files:"                       | tee -a ${PATH_DATABASE}/sas.log
-	echo "    "                                     | tee -a ${PATH_DATABASE}/sas.log
-	diff ${PATH_DATABASE}/hash.${ALG_NAME}.base ${PATH_DATABASE}/hash.${ALG_NAME}.base.org   2>&1 | tee -a ${PATH_DATABASE}/sas.log
-	diff ${PATH_DATABASE}/perm.${ALG_NAME}.base ${PATH_DATABASE}/perm.${ALG_NAME}.base.org   2>&1 | tee -a ${PATH_DATABASE}/sas.log
+
+#### change diff to comm ? 
+	LOG_NAME="$(date +"%Y-%m-%d.%H-%M").check.log"
+    echo "########################################" | tee -a ${PATH_DATABASE}/log/${LOG_NAME}
+	echo "	$(date +"Time: %R ; %d day %m month %Y year")"  | tee -a ${PATH_DATABASE}/log/${LOG_NAME}
+	echo "	Info:  \"<\" removed? ||	\">\" added?"   
+	echo "	This is simple diff output"                                                                                                                   
+	echo "--> Changed files:"                       | tee -a ${PATH_DATABASE}/log/${LOG_NAME}
+	echo "    "                                     | tee -a ${PATH_DATABASE}/log/${LOG_NAME}
+	WYNIK_1=$(diff <(sort ${PATH_DATABASE}/hash.${ALG_NAME}.base) <(sort ${PATH_DATABASE}/hash.${ALG_NAME}.base.org)   2>&1 | tee -a ${PATH_DATABASE}/log/${LOG_NAME})
+	[ -z "$WYNIK_1" ] || echo "$WYNIK_1"
+	WYNIK_2=$(diff <(sort ${PATH_DATABASE}/perm.${ALG_NAME}.base) <(sort ${PATH_DATABASE}/perm.${ALG_NAME}.base.org)   2>&1 | tee -a ${PATH_DATABASE}/log/${LOG_NAME})
+	[ -z "$WYNIK_2" ] || echo "$WYNIK_2"
+	echo " "
+
+#### Show GUI info window.
+#  export DISPLAY=:0.0 ; /usr/bin/notify-send -t 5000 -i gtk-dialog-info "Your message"'
+	[ -z "$(which xmessage)" ] && echo "xmessage not found. I'm guessing x11-utils not installed."
+	[ -z "$WYNIK_1" ] && [ -z "$WYNIK_2" ] || export DISPLAY=:0
+	[ -z "$WYNIK_1" ] && [ -z "$WYNIK_2" ] || sudo -u $USER_NAME xmessage -center -buttons Ok:0 "$(echo -e "Files changed:  Check sas logs \nWho logged now:  $(who)")"
 
 
 ADDITIONAL_VERIFICATION_HASH_V1(){
@@ -202,6 +226,7 @@ else
 ## If "--first.init" option from --help
 	choose_alg
 	mkdir -pm 700 ${PATH_DATABASE}
+	mkdir -pm 700 ${PATH_DATABASE}/log
 	[ "$(ls -ld ${PATH_DATABASE} | grep ^"drwx------" | grep "root root")" ] ||  error1 "--> Folder ${PATH_DATABASE} have too loose permissions or the owner is not root"
 	## Remove all base
 	COUNT_BASE_FILES=$(ls ${PATH_DATABASE}/*base* | wc -l)
@@ -226,7 +251,7 @@ while IFS= read -r LINE1 ; do
 		ProgressBar ${NUMBER} ${COUNT_PATH_BASE}
 	else
 		${ALGORITHM} "$LINE1" | tee -a ${PATH_DATABASE}/hash.${ALG_NAME}.base
-		ls -l "$LINE1" | tee -a ${PATH_DATABASE}/perm.${ALG_NAME}.base
+		ls -li "$LINE1" | tee -a ${PATH_DATABASE}/perm.${ALG_NAME}.base
 	fi
 done < "${PATH_DATABASE}/path.base"
 }
@@ -254,7 +279,68 @@ echo "==========}"
 }
 #=========================}
 
+#=================================={
+sas_install() {
+if [ -d "/opt/sas" ] ; then
+	read -p "Dir /opt/sas/ exist. Do you want reinstall? [Y/n]" SAS_BIN
+	case $SAS_BIN in
+		[Yy]*) rm -rf /opt/sas ;;
+		[Nn]*) echo "Instalation aborded." ; exit 0 ;;
+		*) echo "Please answer Yes or No." ; exit 1 ;;
+	esac
+fi
 
+mkdir -p /opt/sas
+cp "$(dirname $0)/$0" "/opt/sas/$0"
+chown -R root:root "/opt/sas/$0"
+chmod 700 "/opt/sas/$0"
+
+# Info.
+ls -l "/opt/sas/$0" 
+[ -f "/opt/sas/$0" ] && echo "--> Sas installed now."
+[ -f "/opt/sas/$0" ] && echo "--> You can add line to cron:  @reboot bash /opt/sas/simple.aide --check"
+[ -f "/opt/sas/$0" ] || echo "--> Installation failed. Path /opt/sas/ does not exist."
+}
+#==================================}
+
+#=================================={
+sas_uninstall() {
+if [ -d "/opt/sas" ] ; then
+	read -p "Do you want remove /opt/sas/$0 ? [Y/n]" SAS_BIN
+	case $SAS_BIN in
+		[Yy]*) rm -rf /opt/sas 
+			[ -d "/opt/sas" ] && echo "--> Error. Path /opt/sas/ still exist. Not removed."
+			[ -d "/opt/sas" ] || echo "--> /opt/sas uninstalled."
+			echo "--> If you have , you can remove line from cron now:  @reboot /opt/sas/simple.aide --check"
+			;;
+		[Nn]*) echo "--> Removing canceled." ;;
+		*) echo "Please answer Yes or No.";;
+	esac
+
+else
+	echo "--> Nothing to remove, /opt/sas/ dir not exist."
+fi
+
+if [ -d "/var/sas" ] ; then
+	echo "-----------"
+	find /var/sas/ -maxdepth 1
+	echo "-----------"
+	read -p "Do you want remove also base in /var/sas/ ? [Y/n]" SAS_BASE
+	case $SAS_BASE in
+		[Yy]*) rm -rf /var/sas ;;
+		[Nn]*) exit 0 ;;
+		*) echo "Please answer Yes or No.";;
+	esac
+	[ -d "/var/sas" ] && echo "--> Uninstall failed. Path still /var/sas/ exist."
+	[ -d "/var/sas" ] || echo "--> /var/sas uninstalled."
+else
+	echo "--> Nothing to remove, base /var/sas not exist."
+fi
+
+
+
+}
+#==================================}
 
 #===============================================================================​=========={
 case $1 in
@@ -275,8 +361,17 @@ case $1 in
 		[ -e ${PATH_DATABASE}/path.base ] || error1 "Your base .../path.base not exist."
 		cat "${PATH_DATABASE}/path.base" | awk -F '/' '{print "/" $2 "/"}' | uniq
     ;;
-    "--log")
-		cat "${PATH_DATABASE}/sas.log"
+    "--list-logs")
+		find /var/sas/log/ -maxdepth 1 | sort
+    ;;
+    "--install")
+		sas_install
+    ;;
+    "--uninstall")
+		sas_uninstall
+    ;;
+    "--version")
+		echo "$0 $VERSION"
     ;;
     "--help"|"-h")
 		echo " "
@@ -286,7 +381,10 @@ case $1 in
         echo "--check       / -c      Option to verify base."
         echo " "
         echo "--show                  If you have base, this show her main directories"
-        echo "--log                   Show log."
+        echo "--list-logs             Show list logs."
+        echo "--install               Install this script to /opt/sas/ ."
+        echo "--uninstall             Remove /opt/sas/script and /var/sas/ base."
+        echo "--version               Show version of this script."
         echo " "
 		echo "INFO:"
         echo "	This software is used to verify changes in the system."
