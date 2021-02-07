@@ -1,0 +1,44 @@
+#!/bin/bash
+
+
+# License: GNU GPL v3  https://www.gnu.org/licenses/gpl-3.0.en.html
+# Destiny: To get name, path and package name of running process. 
+
+# Script not completed. For example, I don't know how to find the module responsible for starting the quorker 
+
+#  https://askubuntu.com/questions/33640/kworker-what-is-it-and-why-is-it-hogging-so-much-cpu
+#  https://unix.stackexchange.com/questions/213334/why-add-parentheses-around-a-process-name
+
+
+# List process without [abc123] without first line and without options and without (sd-pam)
+LIST_PROCESS=$(ps -eo user,pid,cmd  | grep -v '\[.*\]\|grep --color=auto' | awk 'NR!=1' | awk '{ print $1 , $2 ,  $3 }' | grep -v "\(sd-pam\)")
+
+while read; do
+    # If $REPLY contains a path 
+    PATH_OR_NAME=$(echo "$REPLY"  | awk '{ print $3 }')
+    USER_PID=$(echo "$REPLY"  | awk '{ print $1 , $2 }')
+        #echo "$PATH_OR_NAME"
+    if grep -q "/" <<< "$PATH_OR_NAME" ; then
+        PROCESS_PATH="$PATH_OR_NAME"
+        GUESS=""
+    # If $REPLY not contains a path = is process name
+    elif grep -qv "/" <<< "$LIST_PROCESS" ; then
+        # You can use PROCESS_PATH with "which" command
+        # or PROCESS_PID and PROCESS_PATH with "ls -l"
+        #PROCESS_PATH=$(which "$PATH_OR_NAME")
+        GUESS="$PATH_OR_NAME"
+                PROCESS_PID=$(echo "$REPLY"  | awk '{ print $2 }')
+                PROCESS_PATH=$(ls -l  /proc/$PROCESS_PID/exe | awk '{print $NF}')
+    else
+        echo "error = $REPLY"
+    fi
+
+    PACKAGE_OF_PATH=$(/usr/bin/dpkg -S "$PROCESS_PATH" | awk '{ print $1 }' |  sed 's/://')
+    echo "$USER_PID = $GUESS = $PROCESS_PATH = $PACKAGE_OF_PATH"
+
+done <<< "$LIST_PROCESS"
+
+
+
+
+

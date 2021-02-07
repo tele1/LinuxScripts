@@ -1,0 +1,44 @@
+#!/bin/bash
+
+
+# License: GNU GPL v3  https://www.gnu.org/licenses/gpl-3.0.en.html
+# Destiny: To get name, path and package name of process. 
+
+# Script not completed. For example, I don't know how to find the module responsible for starting the quorker 
+
+#  https://askubuntu.com/questions/33640/kworker-what-is-it-and-why-is-it-hogging-so-much-cpu
+#  https://unix.stackexchange.com/questions/213334/why-add-parentheses-around-a-process-name
+
+LIST_PROCESS=$(ps -eo user,pid,cmd  | grep -v '\[.*\]\|grep --color=auto' | awk 'NR!=1' | awk '{ print $1 , $2 ,  $3 }')
+PROCESS_WITH_PATH=$(echo "$LIST_PROCESS" | grep "/")
+PROCESS_WITHOUT_PATH=$(echo "$LIST_PROCESS" | grep -v "/")
+
+FUNC_1() {
+while read; do
+    PATH_OF_REPLY=$(echo "$REPLY"  | awk '{ print $3 }')
+    PACKAGE_OF_PATH=$(/usr/bin/dpkg -S "$PATH_OF_REPLY" | awk '{ print $1 }' |  sed 's/://')
+    echo "$REPLY = $PACKAGE_OF_PATH"
+done <<< "$PROCESS_WITH_PATH"
+}
+
+FUNC_2() {
+NAME_1=$(echo "$PROCESS_WITHOUT_PATH" | awk '{ print $3 }' | sort | uniq | grep -v "\(sd-pam\)")
+while read; do
+#FIND_PATH=$(find /proc/$(pgrep -x -U $(id -ur) ${REPLY})/exe -printf "%l\n")
+FIND_PATH=$(which "$REPLY")
+FIND_PACKAGE=$(/usr/bin/dpkg -S "$FIND_PATH" | awk '{ print $1 }' |  sed 's/://')
+echo "$REPLY = $FIND_PACKAGE"
+done <<< "$NAME_1"
+}
+
+FUNC_3() {
+JOBS=$(ps -eo user,pid,cmd  | grep  '\[.*\]\|grep --color=auto')
+echo  "$JOBS"
+}
+
+FUNC_1
+FUNC_2
+FUNC_3
+
+
+
