@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="2"
+VERSION="4"
 LICENCE="GPL v3: https://www.gnu.org/licenses/gpl.html "
 SOURCE="https://github.com/tele1/LinuxScripts"
 
@@ -149,8 +149,8 @@ DEBUG 1006.1 #_________________________________________________#
 #### Audit #########################################################}
 
 
-# "Inspection:  bad login attempts"
-SS=$(cat /var/log/btmp)
+# "Inspection:  bad login attempts" # /var/log/btmp
+SS=$(lastb)
     WRITE   "Inspection:  bad login attempts"
 DEBUG 1007 #_________________________________________________#
 
@@ -217,15 +217,15 @@ DEBUG 1015 #_________________________________________________#
 #  https://www.thegeekdiary.com/how-to-allow-only-specific-non-root-users-to-use-crontab/
 #  https://stackoverflow.com/questions/134906/how-do-i-list-all-cron-jobs-for-all-users
 
-SS=$(for user in $(cut -f1 -d: /etc/passwd); do CC=$(crontab -u $user -l) ; EE=$( sed '/^$/d' "$CC" | wc -l) ; \
-[[ $EE -ne 0 ]] && echo -e "$user \n${CC}" ; done 2>/dev/null)
+SS=$(for USER in $(cut -f1 -d: /etc/passwd); do CC=$(crontab -u $USER -l | grep -v ^'#') ; EE=$(sed '/^$/d' <<< "$CC" | wc -l) ; [[ $EE -ne 0 ]] && echo -e "Jobs from user: $USER \n${CC}" ; done 2>/dev/null)
     WRITE   "Inspection:  Users cron jobs list:"
 
 [ -f "/etc/cron.allow" ] && GREEN_ECHO "File /etc/cron.allow"
 [ -f "/etc/cron.allow" ] && cat /etc/cron.allow
 
 [ $(which cron) ] && echo " "
-[ $(which cron) ] && ls -lA /etc/cron.*/
+[ $(which cron) ] && GREEN_ECHO "Cron and Anacron:"
+[ $(which cron) ] && find /etc/*cron*  -type f
 [ $(which cron) ] && echo " "
 
 [ "$(which systemctl)" ] && GREEN_ECHO "Timers from systemd unit files:"
@@ -249,8 +249,14 @@ SS=$(ls -alR /proc/*/cwd 2> /dev/null | grep --color=auto 'tmp\|shm')
 DEBUG 1017 #_________________________________________________#
 
 
-
-SS=$(ls -alR /proc/*/exe 2> /dev/null | grep deleted)
+SS_1=$(ls -alR /proc/*/exe 2> /dev/null | grep deleted)
+#echo "$SS_1"
+SS=''
+while IFS= read -r LINE_SS ; do
+    APP_PID=$(echo "$LINE_SS" | awk  '{ print $9 }' | sed -e 's/[a-Z/]//g')
+    STRINGS=$(strings /proc/"${APP_PID}"/cmdline)
+    SS="$SS \n $LINE_SS \n $STRINGS \n --------"
+done <<< "$SS_1"
     WRITE   "Inspection:  process that is running but a binary file has been deleted :"
 DEBUG 1018 #_________________________________________________#
 
