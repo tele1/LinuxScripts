@@ -7,7 +7,7 @@
 #
 # Licence: GNU GPL v3
 # Version: Beta 2
-# Script use:	Name_of_script -f /path/to/dir/
+# Script usege:	Name_of_script -f /path/to/dir/
 # Info:
 #       Online markdown editor:  markdown-editor.github.io/
 #       Html editor:             html-online.com/editor/

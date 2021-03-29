@@ -1,0 +1,605 @@
+#!/bin/bash
+
+#       Name:    objdump_checker
+#       Version: 8
+#       License:  GNU GPL v3
+#       https://gnu.org/licenses/gpl.html
+#		Written by: tele
+
+
+
+
+
+#		This help you find dependencies from compiled source code.
+#		Useful tool to find "Requires: " for build .spec file for build rpm package.
+#		Made for PCLinuxOS
+#
+#
+# Used:  bash, ldd, awk, grep, cut, tail, sort, uniq, rpm2cpio, rm
+#
+#
+# 
+#		How it works ?
+#	1. Unpack rpm package ( rpm2cpio ... )
+#	2. Find shared file provide executable file. ( objdump ... )
+#	3. Find path for shared file. ( ldconfig ... )
+#	4. Find which package provide this shared file ( rpm ... )
+#	5. Show rpm dependencies ( cat ... )
+#	More in wiki http://pclinuxoshelp.com/index.php/Ldd
+
+
+#	How Use:
+#			/path/objdump_checker name_package.rpm
+#	or
+#			/path/objdump_checker name_folder
+
+
+#	Example output:
+#		Package: 
+#		     photoqt-1.3  
+#
+#		Requires:  glibc-2.20-7pclos2015
+#		Requires:  %{_lib}audit1-2.1.2-1pclos2011
+#		Requires:  %{_lib}exiv2_13-0.24-1pclos2014
+#		Requires:  %{_lib}gcrypt11-1.5.4-1pclos2015
+#		Requires:  %{_lib}glib2.0_0-2.46.0-2pclos2015
+#		Requires:  %{_lib}GraphicsMagick3-1.3.20-1pclos2014
+#		Requires:  %{_lib}pam0-1.1.4-1pclos2011
+#
+#		4 -------------------------------------------
+# 		Additional Info: 
+#		 Founded 3 python scripts.
+#		 Founded 0 perl scripts.
+#		 Founded 0 lua scripts.
+# 
+#		  If you see any scripts, take into account this in dependencies above.
+#		  This mean scripts could want additional dependencies for example,
+#		  python scripts --> Requires: python 
+#		----------  The End  -------------------------------
+
+
+#======================================================================================
+
+
+
+
+
+# debug status
+VERBOSE=0
+
+
+#----------- Menu -------------------------------------------------------{
+
+# if $1 is empty = empty option
+if [ -z $1 ]
+then
+		echo -e "\n  Error: unknown option"
+		echo " "
+		echo "-------------------------------------------------------"
+			echo "usage: $0 package.rpm "
+			echo "       $0 --debug package.rpm"
+		echo "-------------------------------------------------------"
+		echo "--debug: verbose output for debugging"
+		echo "--help:  show options"
+		echo " "
+		echo -e "      This script find Requires dependencies from "
+		echo -e "      rpm package. \n"
+		exit 1
+fi
+
+
+
+
+ for i in $1
+do
+   case $i in
+		-d|--debug)
+			VERBOSE=1
+			echo "Debug ON"
+		;;
+		-h|--help)
+			echo "-------------------------------------------------------"
+			echo "usage: $0 package.rpm "
+			echo "       $0 --debug package.rpm"
+			echo "-------------------------------------------------------"
+			echo "--debug: verbose output for debugging"
+			echo "--help:  show options"
+			echo " "
+			echo -e "      This script find Requires dependencies from "
+			echo -e "      rpm package. \n"
+			exit
+		;;
+#		*)
+#			echo -e "\n  Error: unknown option"
+#			echo -e "  use: $0 --help \n"
+#		exit 1
+#		;;
+   esac
+done
+
+#----------- Menu -------------------------------------------------------}
+
+
+
+
+
+
+
+#---------------------------{
+# check which user I am
+aaa=$(whoami)
+
+
+# don't use root account
+if echo $aaa | grep -q "root"
+	then
+		echo "Please don't use root auccount for this script. ! "
+		echo "I suggest use plain user account."
+		exit 1
+fi
+#---------------------------}
+
+
+
+
+
+#---------------------------{
+# if $2 is empty = empty option
+if [ -z $2 ]
+then
+	package="$1"
+	echo "$package -package"
+else
+	package="$2"
+	echo "$package -package"
+fi
+#---------------------------}
+
+
+
+
+
+#---------------------------{
+if echo "$package" | grep -q "/home/"
+then
+	echo -e "\n Please don't use path with name rpm package. \n "
+	exit 1
+fi
+#---------------------------}
+
+
+
+
+#----------------------------------------
+# Check - if file exist remove and create new folder
+if [ -d ~/tmp/ObjdumpChecker ]
+then
+	rm -fvr ~/tmp/ObjdumpChecker
+	mkdir ~/tmp/ObjdumpChecker
+else
+	mkdir ~/tmp/ObjdumpChecker
+fi
+#----------------------------------------
+
+
+
+#------------------ Unpack rpm ----------------------------------------{
+# link from "pwd" and package name    (objdunp_checker somepackge-1.0.rpm)
+echo -e "\n $package"
+aaea="$(pwd)"
+
+
+
+
+
+
+			# if ".rpm" this is package .rpm 
+		    if echo $package | grep -q  "\.rpm$"
+		    then  
+				echo "Ok, this is .rpm package."
+
+					# check file
+					if ls $package
+					then 
+						echo "OK, file exist"
+					else 
+						echo -e "\n Error: \n File $package not found \n"
+						exit 1
+					fi
+
+
+				# unpack .rpm inside TEST folder
+				cd ~/tmp/ObjdumpChecker/
+				mkdir TEST
+				cd TEST
+				rpm2cpio $aaea/$package | cpio -idv
+				cd $aaea
+				aae="/home/$aaa/tmp/ObjdumpChecker/TEST/"
+				echo "$aae = aae"
+				
+			else
+#				echo -e "\n This can not be used, this not .rpm package. \n"
+				aae="${aaea}/${package}"
+
+			fi
+#------------------ Unpack rpm --------------------------------------------}
+
+
+
+
+
+
+
+
+
+#--------------------------------------------------------------------{
+# find executables files (/home/gg/src/rpm/BUILDROOT/.../build/src/libinjeqt.so.1.0.1)
+find $aae  -type f -executable | xargs file | grep "ELF." | cut -d: -f1 > ~/tmp/ObjdumpChecker/1.elf.list 
+
+
+
+echo " 1 --------------------------"
+
+
+# In file elf.list is ... lines.
+#aaf=$(cat -n ~/tmp/ObjdumpChecker/1.elf.list | tail -1 | awk '{print $1}')
+aaf=$(cat -n ~/tmp/ObjdumpChecker/1.elf.list  | sed '/^\s*$/d' | wc -l)
+
+echo "In file elf.list is $aaf lines."
+#--------------------------------------------------------------------}
+
+
+
+
+
+
+echo "2 --loop -------------------{"
+
+# line to test - namber loops
+# for i in `seq 1 $aa`
+for i in `seq 1 $aaf`
+do
+       echo "Loop nr: $i / $aaf"
+
+       # line from elf.list
+       aag=$(awk 'NR=='$i ~/tmp/ObjdumpChecker/1.elf.list)
+
+
+       echo "main $aag" >> ~/tmp/ObjdumpChecker/2.objdump.list
+#       ldd $ab | awk '{ print $(NF-1) }' >> $pw/lista_ldd 
+#		readelf -d $ab | grep NEEDED | awk '{print $5}'
+
+
+		aah=$(objdump -p $aag | grep NEEDED | awk '{print $2}')
+
+		# save to file ( libc.so.6 )
+		#echo "$aah" >> ~/tmp/ObjdumpChecker/objdump.list
+
+			# count lines
+			aai=$(echo "$aah" | sed '/^\s*$/d' | wc -l)
+			#echo "$aai - aai"
+
+				for i in `seq 1 $aai`
+				do
+					# line
+					aaj=$(awk 'NR=='$i <<< "$aah")
+					# echo $aaj
+
+
+
+
+						# $ ldconfig -p | grep "libc.so.6"
+						#	libc.so.6 (libc6,x86-64, OS ABI: Linux 2.6.32) => /lib64/libc.so.6
+						#	libc.so.6 (libc6, OS ABI: Linux 2.6.32) => /lib/libc.so.6
+
+					
+
+						# get path from ldconfig ( libc.so.6 (libc6,x86-64, OS ABI: Linux 2.6.32) => /lib64/libc.so.6 )
+						# Warning: ldconfig give sometimes 2 lines, so I added " head -n 1 "
+						aaja=$(ldconfig -p | grep "$aaj" | cut -d ">" -f2 | awk '{print $1}' | head -n 1) 
+
+
+
+
+						# count lines
+						aajb=$(echo "$aaja" | sed '/^\s*$/d' | wc -l )
+						
+
+						# debug
+						if [ $aajb = 0 ] 
+						then 
+							echo -e  "ERROR \n  $aaj - not found in ldconfig"  >> ~/tmp/ObjdumpChecker/2.objdump.errors.list.log
+							echo "$aaja" >> ~/tmp/ObjdumpChecker/2.objdump.errors.list.log 
+						else
+							echo "$aaja" >> ~/tmp/ObjdumpChecker/2.objdump.list
+						fi
+
+
+
+				done
+		
+			
+done
+
+
+echo "Now in file ...2.objdump.list you have list with shared libraries"
+echo "2 --loop -------------------}"
+
+
+
+
+
+
+
+
+
+
+
+
+echo "3 --second loop -------------------------------{"
+# reduce files
+cat  ~/tmp/ObjdumpChecker/2.objdump.list | grep -v "main" | sort | uniq > ~/tmp/ObjdumpChecker/3.objdump.list
+
+
+
+# count lines in file
+aak=$(cat -n ~/tmp/ObjdumpChecker/3.objdump.list | wc -l )
+# echo "In file objdump.list : `cat -n $pw/lista_ldd | tail -1 | awk '{print $1}'` line"
+echo "In file objdump.list is $aak "
+
+
+
+
+  for i in `seq 1 $aak`
+  do
+        echo "loop nr: $i / $aak"
+        # number line loop - number line from 3.objdump.list
+       
+
+		# http://mywiki.wooledge.org/BashPitfalls
+		# for minimalize use "echo" here.
+
+
+        # line from ~/tmp/ObjdumpChecker/3.objdump.list
+		aal=$(awk 'NR=='$i ~/tmp/ObjdumpChecker/3.objdump.list)
+		
+
+
+
+		# line should have " / " so we test 
+        # if "Slash exist"
+        if echo $aal | grep -q "/"
+		then
+
+             # if "main" exist
+		     if echo $aal | grep -q "main"
+		     then  
+		          aam=$(echo $aal |  cut -d " " -f 2-10)
+		          # echo "Slash exist, main exist"
+					echo "$aal" >> ~/tmp/ObjdumpChecker/3.list.dependencies.txt
+                  		  
+			  
+		     else
+
+						# if Slash exist, main not exist
+		                if echo $aal | grep -q "/src/rpm/"
+                        then
+							# if /src/rpm/ in link exist
+							echo -e "\n $aal - exception" ~/tmp/ObjdumpChecker/3.list.dependencies.txt
+
+
+                            # echo "dep. from BUILD folder : This file ..." >> ~/tmp/ObjdumpChecker/lista_dependencies.txt
+                            #  echo $aam >> lista_dependencies.txt
+                            #  echo "need :" >> lista_dependencies.txt
+                            #  echo $aal  >> lista_dependencies.txt
+                            #  echo "------------------------------" >> ~/tmp/ObjdumpChecker/lista_dependencies.txt
+                              
+                         else
+		                    aan=$(rpm -qf $aal)
+							echo "$aan" >> ~/tmp/ObjdumpChecker/4.list.dependencies.txt
+                         fi
+		     fi
+		
+		else
+		     echo -e "\n Slash not exist" >> ~/tmp/ObjdumpChecker/3.objdump.errors.list.log
+		     echo $aal >> ~/tmp/ObjdumpChecker/3.objdump.errors.list.log
+		     
+			# if you tried test ldd you will have also shared libs from kernel.
+		    # map in " cat /proc/self/maps "
+		    # http://www.trilithium.com/johan/2005/08/linux-gate/
+        fi
+
+       
+  done
+  echo "Now in file ~/tmp/ObjdumpChecker/4.list.dependencies.txt you have list with package wich use shared libs."
+
+
+echo "3 --second loop--------------------------------------------}"
+
+
+
+
+
+
+
+
+
+
+#-----------------------------{
+if [ "$VERBOSE" = 0 ]; then
+		# this clean terminal
+		printf "\ec"
+fi
+#-----------------------------}
+
+
+
+
+
+
+#------------------------------------------------------------{
+
+# $1 - name package if was added to command.
+echo -e "Package: \n     $1 $2 \n"
+
+
+
+
+# In PCLinuxOS "lib64" --> "%{_lib}"
+# Display id of the linux distributor.
+aao=$(lsb_release -i | awk '{print $3}')
+
+case "$aao" in
+	PCLinuxOS) 
+		# list of dependencies
+		cat ~/tmp/ObjdumpChecker/4.list.dependencies.txt | grep -v "main" | sort | uniq | rev | cut -d"-" -f 3- | rev |  sed -e 's/lib64/%{_lib}/g' | awk '{print "Requires:  " $1 }'
+	;;
+	*)
+		cat ~/tmp/ObjdumpChecker/4.list.dependencies.txt | grep -v "main" | sort | uniq | awk '{print "Requires:  " $1 }'
+esac
+#------------------------------------------------------------}
+
+
+
+
+
+
+
+#-----------------------------------------------------{
+if [ "$aaf" = 0 ]
+then
+	echo -e "\n No executable files found from rpm package ( found: $aaf )"
+fi
+
+#-----------------------------------------------------}
+
+
+
+
+
+
+
+#-----------------------------------------------------{
+if [ -f ~/tmp/ObjdumpChecker/3.objdump.errors.list.log ]
+then
+    echo -e "\n Some script problems found \n you can read this in ~/tmp/ObjdumpChecker/2.objdump.errors.list.log ."
+fi
+#------------------------------------------------------}
+
+
+
+echo -e  "\n4 -------------------------------------------"
+
+
+
+
+
+
+
+
+#---------------------------------------------------{
+echo " Additional Info: "
+
+# find python files
+find $aae -name '*.py' > ~/tmp/ObjdumpChecker/4.python.list 
+
+	aba=$(cat ~/tmp/ObjdumpChecker/4.python.list | wc -l)
+	echo "	Founded $aba python scripts."
+
+	# Suggest:
+	# BuildRequires: lib64python-devel
+	# Requires: python
+
+	# cat ...  | grep import 
+
+
+
+
+# find perl files
+find $aae -name '*.perl' > ~/tmp/ObjdumpChecker/5.perl.list 
+
+
+	abb=$(cat ~/tmp/ObjdumpChecker/5.perl.list  | wc -l)
+	echo "	Founded $abb perl scripts."
+
+	# Suggest:
+	# BuildRequires: perl
+	# Requires: perl
+
+	# cat ... | grep use
+
+
+
+
+
+# find lua files
+ find $aae -name '*.lua' > ~/tmp/ObjdumpChecker/6.lua.list 
+
+
+	abc=$(cat ~/tmp/ObjdumpChecker/6.lua.list   | wc -l)
+	echo "	Founded $abc lua scripts."
+
+	# Suggest:
+	# BuildRequires: lib64lua5.2-devel
+	# Requires: lib64lua5.2
+
+
+
+
+
+# find qml files
+# find $aae -name '*.qml' > ~/tmp/ObjdumpChecker/7.qml.list 
+
+
+#	abc=$(cat ~/tmp/ObjdumpChecker/7.qml.list   | wc -l)
+#	echo " Founded $abc qml scripts."
+
+
+	# looking qml lib
+#	abd=$(cat 2.objdump.list | egrep -i 'qml|Qml' | wc -l)
+#	echo "		Founded $abc qml libs."
+
+	# looking "qml.qrc.depends" file
+ 	abe=$(find $aae -name 'qml.qrc.depends'  )
+
+	if echo $abe | grep -q "/" ; then
+		echo "	Founded file: $abe"
+		echo "		To find QML \"Requires:\" you need check source code"
+	fi
+	
+
+
+
+
+echo " "
+echo "  If you see any scripts, take into account this in dependencies above."
+echo "  This mean scripts could want additional dependencies for example,"
+echo "  python scripts --> Requires: python "
+#---------------------------------------------------}
+
+
+
+
+
+
+
+#-- Clean files -------------------------{
+if [ "$VERBOSE" = 0 ]; then
+		# Clean files
+		#echo " Delete temporary files."
+		rm -frv  ~/tmp/ObjdumpChecker > /dev/null
+else
+		echo "Files which can help debug problem you have now in ~/tmp/ObjdumpChecker/ "
+fi
+#-- Clean files ------------------------}
+
+
+
+
+
+echo "----------  The End  -------------------------------"
+
+
+
+
+

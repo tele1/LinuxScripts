@@ -1,0 +1,98 @@
+#!/bin/bash
+
+
+# Created for UPLOS Linux
+# http://www.liberainformatica.it/forum/forumdisplay.php?fid=25
+
+
+# License: GNU GPL v.3
+# Version: 2
+# Destiny: To find and move or remove old rpm duplicates in apt-rpm repository.
+# 	Based on  https://www.redhat.com/archives/rhl-list/2006-December/msg04047.html
+# 	" tip: automated way to delete duplicate rpms "
+# Warning: Script moves also lib rpm, in most cases libs are shared, you don't need move.
+# Usage:   Before use, edit PATH1 and PATH2 inside script
+#   then   ./script
+
+
+
+
+# path where check duplicates
+PATH1="/path/to_your/repository/32bit/RPMS.devel2"
+# path where move duplicates
+PATH2="/path_where_you_want/move/RPMS.to.remove/"
+echo "Error: Change path iside script to own" ; exit
+
+
+# mv -iv ( v debug )
+# DEBUG0= "on" or "off"
+DEBUG0="off"
+
+function DEBUG()
+{
+	[ "$DEBUG0" == "on" ] &&  $@
+}
+
+#================================
+# Clean and create temp folder
+
+
+if [ ! -d ./temp ] ; then
+	mkdir ./temp
+	if [[ "$?" -ne "0" ]]; then
+		echo " -->  Error1: `pwd`/temp can not be created." | tee -a sort.log
+		exit 1
+	fi
+	DEBUG echo "Folder `pwd`/temp created." | tee -a sort.log
+else
+	rm -vrf temp
+	mkdir ./temp
+		if [[ "$?" -ne "0" ]]; then
+			echo " -->  Error2: `pwd`/temp can not be created." | tee -a sort.log
+			exit 1
+		fi
+fi
+
+#================================
+echo "Start"
+
+# 1.
+rpm -qp  --queryformat '%{name}\n' ${PATH1}/* > ./temp/1.pkglist
+DEBUG echo "1. Job finished"
+
+
+# 2.
+sort -g ./temp/1.pkglist | uniq -d > ./temp/2.duplicates
+DEBUG echo "2. Job finished"
+
+
+# 2a. If duplicates not exist, exit
+if [ ! -s "./temp/2.duplicates" ] 
+then
+	echo "No duplicates found in ./temp/2.duplicates ."
+	exit 0
+fi
+
+
+# 3.
+for pkg in `cat ./temp/2.duplicates`; do
+	rpm -qp --queryformat '%{name}@-%{version}-%{release}\n' ${PATH1}/${pkg}*  | grep "${pkg}"@ | sed 's/@//g' | sort -V | tee -a ./temp/3.dupWithVersions | sed '$ d' >> ./temp/4.ToRemove
+done
+DEBUG echo "3. Job finished"
+
+
+# 4. Moving files
+echo "Moving files"
+if [ -e "./temp/4.ToRemove" ] ; then
+	for FILE in $(cat ./temp/4.ToRemove) ; do 
+ 		mv -i "${PATH1}"/"${FILE}"* "${PATH2}"
+			if [[ "$?" -ne "0" ]]; then
+				echo " -->  Error3: "$PATH1"/"$FILE" Can not be moved" | tee -a sort.log
+			fi
+	done
+fi
+echo "The End"
+
+
+
+

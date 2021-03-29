@@ -1,0 +1,157 @@
+#!/bin/bash
+
+
+# Created for UPLOS Linux
+# http://www.liberainformatica.it/forum/forumdisplay.php?fid=25
+
+# License: GNU GPL v.3
+# Version: Beta 2
+# Destiny: To parse file and create tree broken rpm packages from repo.
+# Warning: Script working only with script to find broken packages in repo.
+# Usage:  ./script
+
+
+#------------------------{
+# "on" / "off"
+DEBUG0=on
+
+DEBUG()
+{
+	[ "$DEBUG0" == "on" ] && "$@"
+}
+
+RC='\e[0;31m' # Red Color
+NC='\e[0m' # No Color
+#------------------------}
+
+# Clean
+mkdir -p ./BROKEN
+rm -fr ./BROKEN/*
+
+#---------------------------------------{
+# Parse ./TMP/apt.log file.
+
+NUMBER_OF_LINES=$(cat ./TMP/apt.log | wc -l)
+
+for i in `seq 1 $NUMBER_OF_LINES`
+do
+	LINE=$(awk 'NR=='$i  ./TMP/apt.log )
+	PACKAGE=$(echo "$LINE" | grep -i ^'  [a-z]' | awk -F':' '{ print $1 }')
+
+	if [[ ! -z "$PACKAGE" ]]; then
+		VAR_PACKAGE="$PACKAGE"
+	fi
+#		DEBUG echo "$VAR_PACKAGE"
+	grep -q "not installable" <<< $LINE && echo "$VAR_PACKAGE" >> ./BROKEN/list1
+
+done
+
+#cat ./BROKEN/list1 | uniq -u | grep -v libreoffice* > ./BROKEN/list2
+sort ./BROKEN/list1 | uniq | grep -v libreoffice* > ./BROKEN/list2
+#---------------------------------------}
+
+
+#---------------------------------------------------------{
+# Create dependency tree
+
+factorial(){
+  local IN=$1
+  local NAME=$(basename $IN)
+
+	DEPTH=$[$DEPTH + 1]
+    if [ $DEPTH -ge $MAXDEPTH ];
+        then
+        echo "	MAXDEPTH of $MAXDEPTH reached at file $IN."
+        echo "	Continuing with next file..."
+		DEPTH="1"
+		echo "\"$NAME\" -> \"This is MAXDEPTH of script for $NAME\"; "  >> ./BROKEN/graph.dot
+        return
+    fi 
+
+	if	grep -q "${IN}" ./BROKEN/list3_broken ; then
+		echo " Package was parsed before ${IN}"
+        echo "	Continuing with next file..."
+		#echo "\"$NAME\" -> \"This $NAME have loop dependency.\"; "  >> ./BROKEN/graph.dot
+        return
+	fi 
+
+
+	echo "Parsing file:              $IN"
+	#apt-cache whatdepends "${IN}" | grep ^'  [a-z]' | sed "s/-[0-9].*//g" | grep -v "$IN" &> $READELFTMPFILE
+	echo "" > ./BROKEN/bug
+	APT_COM=$(apt-cache whatdepends "${IN}" 2> ./BROKEN/bug)
+
+        #if [ -s "./BROKEN/bug" ];then
+		if [[ ! -z "$(cat ./BROKEN/bug)" ]];then
+			echo "\"$NAME\" -> \"$(cat ./BROKEN/bug)\"; "  >> ./BROKEN/graph.dot
+			echo "${NAME}" >> ./BROKEN/list3_broken
+		else
+			APT_PARSED=$(echo "$APT_COM" | grep ^'  [a-z]' | sed "s/-[0-9].*//g" | grep -v "$IN"$ &> $READELFTMPFILE)
+			if [ -n "$APT_PARSED" ];then
+				echo "\"$NAME\" -> \"$APT_PARSED\"; "  >> ./BROKEN/graph.dot
+				#echo -e "${NAME}\n${APT_PARSED}" >> ./BROKEN/list3_broken
+				echo -e "${NAME}" >> ./BROKEN/list3_broken
+			fi
+        fi
+
+	DEPENDENCIES=$(cat $READELFTMPFILE)
+	echo "$DEPENDENCIES"
+
+    for DEP in $DEPENDENCIES;
+    do
+        if [ -n "$DEP" ];
+        then
+			apt-cache whatdepends "${IN}" | grep ^'  [a-z]' | sed "s/-[0-9].*//g" | grep -v "$IN"$ &> $LDDTMPFILE
+
+			DEPPATH=$(grep $DEP "$LDDTMPFILE")
+            if [ -n "$DEPPATH" ];
+            then
+                echo "\"$NAME\" -> \"$DEP\"; "  >> ./BROKEN/graph.dot
+				#echo -e "${NAME}\n${DEP}" >> ./BROKEN/list3_broken
+				echo -e "${NAME}" >> ./BROKEN/list3_broken
+                factorial $DEPPATH
+			fi
+		fi
+	done
+
+	DEPTH=$[$DEPTH - 1]
+}
+
+
+DEPTH=0
+MAXDEPTH=2
+READELFTMPFILE=$(mktemp -t)
+LDDTMPFILE=$(mktemp -t)
+
+
+	echo "digraph DependencyTree {" >> ./BROKEN/graph.dot
+# call factorial
+##########################################
+while read LINE; do
+
+	echo  "\"${LINE}\"  [shape=box];" >> ./BROKEN/graph.dot
+	factorial "$LINE"
+
+	# Max node ~150
+	#LINES=$(cat ./BROKEN/graph.dot | wc -l)
+	#if [[ $LINES > 80 ]]; then
+		#echo "}" >> ./BROKEN/graph.dot
+		#dot -O -Tpng ./BROKEN/graph.dot
+		#TIME1=$(date +%H.%M.%S)
+		#mv graph.dot.png graph.${TIME1}.png
+		#mv ./BROKEN/graph.dot graph.${TIME1}.dot
+	#fi
+done < ./BROKEN/list2
+
+if [ -f ./BROKEN/graph.dot ]; then
+	echo "}" >> ./BROKEN/graph.dot
+	dot -O -Tpng ./BROKEN/graph.dot
+fi
+#echo "}" >> ./BROKEN/graph.dot
+##########################################
+#dot -Tpng ./BROKEN/graph.dot -o ./BROKEN/tree.png
+#---------------------------------------------------------}
+
+
+sort ./BROKEN/list3_broken | uniq > ./BROKEN/list4_broken
+

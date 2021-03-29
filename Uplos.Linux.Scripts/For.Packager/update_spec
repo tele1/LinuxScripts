@@ -1,0 +1,77 @@
+#!/bin/bash
+
+
+# Created for UPLOS Linux
+# http://www.liberainformatica.it/forum/forumdisplay.php?fid=25
+
+# License: GNU GPL v.3
+# Version: 1
+# Destiny: For Automatic Update "Version, Release" In Spec File
+# Usage: ./script /path/to/file.spec
+
+
+#------------------------{
+# "on" / "off"
+DEBUG0=on
+
+DEBUG()
+{
+	[ "$DEBUG0" == "on" ] && "$@"
+}
+#------------------------}
+
+
+DEBUG echo "----"
+
+
+#--OLD SPEC------------------------------{
+# Read name spec file
+LINK="$1"
+	DEBUG echo "Link = $LINK"
+DIR=$(dirname "$1")
+	DEBUG echo "Dir = $DIR"
+SPEC=$( echo "$1" | awk 'BEGIN{FS="/"}{print $NF}')
+	DEBUG echo "Spec file = $SPEC"
+
+#Read variables from spec file
+GETINFO()
+{
+	sed -n "s/^$1: *\([^ ][^ ]*\) *$/\1/p" "$LINK"
+}
+
+# Variables from old spec file
+#NAME="$(GETINFO Name)"
+NAME="$(grep ^Name:  $LINK | awk '{ print $2 }')"
+	DEBUG echo "Name = $NAME"
+VERSION="$(GETINFO Version)"
+	DEBUG echo "Version = $VERSION"
+RELEASE="$(grep ^Release:  $LINK | awk '{ print $2,$3 }')"
+	DEBUG echo "Release = $RELEASE"
+#--OLD SPEC------------------------------}
+
+
+DEBUG echo "----"
+
+
+#--NEW SPEC------------------------------}
+INCREMENT_VERSION()
+{
+	PLUS=( ${VERSION2//./ })
+	((PLUS[2]++))
+	VERSION2="${PLUS[0]}.${PLUS[1]}.${PLUS[2]}"
+}
+
+# New variables for new spec file
+VERSION2=$VERSION
+INCREMENT_VERSION
+		DEBUG echo "Version2 = $VERSION2"
+RELEASE2="%mkrel 1"
+		DEBUG echo "Release2 = $RELEASE2"
+#--NEW SPEC------------------------------}
+
+
+	DEBUG echo "Will save to = ${DIR}/${NAME}-${VERSION2}.spec"
+# Save spec file
+sed -e "s/$VERSION/	$VERSION2/" -e "s/$RELEASE/$RELEASE2/" $LINK  > ${DIR}/${NAME}-${VERSION2}.spec
+
+

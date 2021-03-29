@@ -1,0 +1,205 @@
+#!/bin/bash
+
+
+
+
+# License: GNU GPL v.3
+# Version: 1
+# Destiny: This show the maximum depth to which dependencies are resolved
+# Warning: This script not support script dependencies like QML, python, java, script and other.
+# Dependencies: Graphviz png
+# Usage:  ./script /path/to/lib.so.x tree1.png
+
+
+
+MAXDEPTH=14
+
+
+
+function analyze
+{
+    local OUT=$1
+    local IN=$2
+    local NAME=$(basename $IN)
+ 
+
+    cat $OUT >> OUT
+    echo $IN >> IN
+#    echo $NAME >> NAME
+#    echo $LIST >> LIST
+   
+
+    for i in $LIST
+    do
+        if [ "$i" == "$NAME" ];
+        then
+            # This file was already parsed
+            return
+        fi
+    done
+    # Put the file in the list of all files
+    LIST="$LIST $NAME"
+#    echo $LIST >> LIST
+ 
+    DEPTH=$[$DEPTH + 1]
+    if [ $DEPTH -ge $MAXDEPTH ];
+        then
+        echo "MAXDEPTH of $MAXDEPTH reached at file $IN."
+        echo "Continuing with next file..."
+        return
+    fi
+ 
+    echo "Parsing file:              $IN"
+ 
+    $READELF $IN &> $READELFTMPFILE
+    ELFRET=$?
+
+
+#    cat $READELFTMPFILE > READELFTMPFILE
+#    echo $ELFRET > ELFRET
+ 
+    if [ $ELFRET != 0 ];
+        then
+        echo "ERROR: ELF reader returned error code $RET"
+        echo "ERROR:"
+        cat $TMPFILE
+        echo "Aborting..."
+        rm $TMPFILE
+        rm $READELFTMPFILE
+        rm $LDDTMPFILE
+        exit 1
+    fi
+ 
+    DEPENDENCIES=$(cat $READELFTMPFILE | grep NEEDED | awk '{if (substr($NF,1,1) == "[") print substr($NF, 2, length($NF) - 2); else print $NF}')
+#     echo $DEPENDENCIES >> 3.txt
+ 
+    for DEP in $DEPENDENCIES;
+    do
+        if [ -n "$DEP" ];
+        then
+ 
+            ldd $IN &> $LDDTMPFILE
+            LDDRET=$?
+ 
+            if [ $LDDRET != 0 ];
+                then
+                echo "ERROR: ldd returned error code $RET"
+                echo "ERROR:"
+                cat $TMPFILE
+                echo "Aborting..."
+
+
+
+                rm $TMPFILE
+                rm $READELFTMPFILE
+                rm $LDDTMPFILE
+                exit 1
+            fi
+ 
+
+
+            DEPPATH=$(grep $DEP $LDDTMPFILE | awk '{print $3}')
+#            echo $DEPPATH >> 4.txt
+            if [ -n "$DEPPATH" ];
+            then
+
+
+
+                 bb=$(rpm -qf $IN)
+
+                 aa=$(rpm -qf $DEPPATH)
+
+                ac=" \"$NAME \n $bb\" -> \"$DEP \n $aa\";"
+                echo  $ac  >> $OUT
+                analyze $OUT $DEPPATH
+               
+
+ #               echo "$DEPPATH" >> $DEPPATH
+
+
+
+            fi
+        fi
+    done
+ 
+    DEPTH=$[$DEPTH - 1]
+}
+ 
+########################################
+# main                                 #
+########################################
+ 
+if [ $# != 2 ];
+    then
+    echo "Usage:"
+    echo "  $0 [filename] [outputimage]"
+    echo ""
+    echo "This tools analyses a shared library or an executable"
+    echo "and generates a dependency graph as an image."
+    echo ""
+    echo "GraphViz must be installed for this tool to work."
+    echo ""
+    exit 1
+fi
+ 
+DEPTH=0
+INPUT=$1
+OUTPUT=$2
+TMPFILE=$(mktemp -t)
+LDDTMPFILE=$(mktemp -t)
+READELFTMPFILE=$(mktemp -t)
+LIST=""
+ 
+if [ ! -e $INPUT ];
+    then
+    echo "ERROR: File not found: $INPUT"
+    echo "Aborting..."
+    exit 2
+fi
+ 
+# Use either readelf or dump
+# Linux has readelf, Solaris has dump
+READELF=$(type readelf 2> /dev/null)
+if [ $? != 0 ]; then
+  READELF=$(type dump 2> /dev/null)
+  if [ $? != 0 ]; then
+    echo Unable to find ELF reader
+    exit 1
+  fi
+  READELF="dump -Lv"
+else
+  READELF="readelf -d"
+fi
+ 
+ 
+ 
+echo "Analyzing dependencies of: $INPUT"
+echo "Creating output as:        $OUTPUT"
+echo ""
+ 
+echo "digraph DependencyTree {" > $TMPFILE
+
+# echo "  \"$(basename $INPUT)\" [shape=box];" >> $TMPFILE
+  echo "  \"$(basename $INPUT) \n $(rpm -qf $INPUT) \" [shape=box];" >> $TMPFILE
+
+analyze $TMPFILE "$INPUT"
+echo "}" >> $TMPFILE
+ 
+#cat $TMPFILE # output generated dotfile for debugging purposses
+dot -Tpng $TMPFILE -o$OUTPUT
+
+cat $TMPFILE > 1_TMPfile.txt
+#cat $LDDTMPFILE > LDDtpm_file.txt
+
+
+# cat $LDDTMPFILE > LDDTMPFILE
+# cat $TMPFILE > TMPFILE
+
+ rm $LDDTMPFILE
+ rm $TMPFILE
+ 
+
+
+
+
+exit 0

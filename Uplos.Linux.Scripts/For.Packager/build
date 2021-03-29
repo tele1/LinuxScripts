@@ -1,0 +1,246 @@
+#!/bin/bash
+
+
+# Created for UPLOS Linux
+# http://www.liberainformatica.it/forum/forumdisplay.php?fid=25
+
+# License: GNU GPL v.3
+# Version: 1.6
+# Destiny: For build and sort rpm packages.
+# Usage:  ./script /path/to/file.spec
+
+
+#------------------------{
+# OPTIONS = "on" / "off"
+  # When "DEBUG1" is active, scipt will show more debug info.
+DEBUG1=on
+  # When "CLAMSCAN1" is active, script will scan files.
+CLAMSCAN1=on
+  # When "LOCAL_REPO1" is active, script will create local repo in ~/src/apt/
+LOCAL_REPO1=on
+#------------------------}
+
+
+###########################################################################################
+#------------------------{
+DEBUG()
+{
+	[ "$DEBUG1" == "on" ] && "$@"
+}
+
+RC='\e[0;31m' # Red Color
+NC='\e[0m' # No Color
+#------------------------}
+
+
+#---------------------------{
+# CHECK IF FOLDERS ARE NOT EMPTY
+EMPTY="0"
+
+BROKEN()
+{
+	echo -e "${RC}Error: $@. ${NC}" ; EMPTY=$((EMPTY+1))
+}
+
+CHECK_CLAM()
+{
+[ "$(clamscan -V)" ] ||  BROKEN "You need install clamav or disable anti-virus in script settings"
+}
+
+[[ $EUID -eq 0 ]] && BROKEN "Please don't use this script from root."
+[ "$(ls -A ~/src/rpm/BUILDROOT/)" ] && BROKEN "Folder is not empty: ~/src/rpm/BUILDROOT/"
+[ "$(ls -A ~/src/rpm/RPMS/noarch/)" ] && BROKEN "Folder is not empty: ~/src/rpm/RPMS/noarch/"
+[ "$(ls -A ~/src/rpm/RPMS/i686/)" ] && BROKEN "Folder is not empty: ~/src/rpm/RPMS/i686/"
+[ "$(ls -A ~/src/rpm/RPMS/i586/)" ] && BROKEN "Folder is not empty: ~/src/rpm/RPMS/i586/"
+[ "$(ls -A ~/src/rpm/RPMS/i486/)" ] && BROKEN "Folder is not empty: ~/src/rpm/RPMS/i486/"
+[ "$(ls -A ~/src/rpm/RPMS/i386/)" ] && BROKEN "Folder is not empty: ~/src/rpm/RPMS/i386/"
+[ "$(ls -A ~/src/rpm/SRPMS/)" ] && BROKEN "Folder is not empty: ~/src/rpm/SRPMS/"
+[ "$CLAMSCAN1" == "on" ] && CHECK_CLAM
+# KILL SCRIPT IF ANY FOLDER IS NOT EMPTY
+	DEBUG echo "Errors = $EMPTY"
+[ "$EMPTY" -ne "0" ] && exit 1
+
+#---------------------------}
+
+
+#--------------------------------{
+# READ SPEC FILE
+LINK="$1"
+	DEBUG echo "Link = $LINK"
+if [ -z "$LINK" ]; then echo -e "${RC}Error: You need give path to spec file. ${NC}" ; exit 1 ;fi
+if [ ! -f $LINK ]; then echo -e "${RC}Error: Spec file not exist: $LINK ${NC}" ; exit 1 ;fi
+DIR=$(dirname "$1")
+	DEBUG echo "Dir = $DIR"
+SPEC=$( echo "$1" | awk 'BEGIN{FS="/"}{print $NF}')
+	DEBUG echo "Spec file = $SPEC"
+if grep -q "^Packager:" $LINK; then echo -e "${RC}Remove \"Packager:\" from spec file. ${NC}" ; exit 1 ;fi
+#--------------------------------}
+
+
+echo -e "\n----RMPBUILD--------------{ "
+# BUILD PACKAGE
+rpmbuild -ba --sign $LINK 2>&1 | tee $LINK.log
+STATUS=${PIPESTATUS[0]}
+	DEBUG echo "$STATUS"
+	
+# IF BUILD FAILED
+if [[ ! "$STATUS" == "0" ]]; then
+	echo -e "${RC}Error from build package. ${NC}" ; exit 1
+fi
+echo -e "----RMPBUILD--------------} \n"
+
+
+#------------------------------------------------------------{
+# MOVE PACKAGES
+RPM_LIST="$(find $(rpm -E %_topdir)/RPMS -type f)"
+	DEBUG echo "Rpm_List = "$RPM_LIST""
+
+SRC_LIST=$(find $(rpm -E %_topdir)/SRPMS -type f)
+	DEBUG echo "Src_List = $SRC_LIST"
+[[ $(echo "$SRC_LIST" | wc -l) == "1" ]]  || BROKEN "Too much or not found src.rpm ? : ~/src/rpm/SRPMS/"
+[ "$EMPTY" -ne "0" ] && exit 1
+
+PACKAGE=$(rpm -qp --queryformat '%{name}-%{version}-%{release}\n' $SRC_LIST)
+	DEBUG echo "Package = $PACKAGE"
+
+[ -d "$HOME/src/rpm/backup/$PACKAGE" ] && rm -rf "$HOME/src/rpm/backup/$PACKAGE"
+mkdir -p ~/src/rpm/backup/"$PACKAGE"/{RPMS,SRPMS,SHA256}
+
+#---- move rpm ----{
+echo -e "\n Moving packages ..."
+for i in ${RPM_LIST}; do
+	# Create sha256 and move file
+	cd ${i%/*}
+	sha256sum  ${i##*/} > ${HOME}/src/rpm/backup/"$PACKAGE"/SHA256/${i##*/}.sha256
+	mv -v $i ${HOME}/src/rpm/backup/"$PACKAGE"/RPMS/
+		[ "$?" -ne 0 ] && BROKEN "Failed move ${i}"
+	cd -
+	# Veryfication file
+	cd ${HOME}/src/rpm/backup/"$PACKAGE"/RPMS
+	sha256sum -c ${HOME}/src/rpm/backup/"$PACKAGE"/SHA256/${i##*/}.sha256 
+		[ "$?" -ne 0 ] && BROKEN "Failed sha256sum -c ${HOME}/src/rpm/backup/"$PACKAGE"/SHA256/${i##/*/}.sha256"
+	cd -
+done
+	DEBUG echo " rpm moved"
+#---- move rpm ----{
+
+#---- move src.rpm ----{
+	# Create sha256
+cd ${HOME}/src/rpm/SRPMS/
+sha256sum  ${SRC_LIST##/*/} > ${HOME}/src/rpm/backup/"$PACKAGE"/SHA256/${SRC_LIST##/*/}.sha256
+	# Move file
+mv -v ${SRC_LIST} ${HOME}/src/rpm/backup/"$PACKAGE"/SRPMS/
+	[ "$?" -ne 0 ] && BROKEN "Failed move ${SRC_LIST}"
+cd -
+	# Veryfication file
+cd ${HOME}/src/rpm/backup/"$PACKAGE"/SRPMS
+sha256sum -c ${HOME}/src/rpm/backup/"$PACKAGE"/SHA256/${SRC_LIST##/*/}.sha256 
+	[ "$?" -ne 0 ] && BROKEN "Failed sha256sum -c ${HOME}/src/rpm/backup/"$PACKAGE"/SHA256/${SRC_LIST##/*/}.sha256"
+cd -
+	DEBUG echo " src.rpm moved"
+#---- move src.rpm ----}
+#------------------------------------------------------------}
+
+
+#-----------------------------------{
+#----FOR RPM-----------{
+# Verification a list of all keys installed for RPM.
+[ "$(rpm -qa gpg-pubkey*)" ] || BROKEN "You don't have keys installed for RPM"
+
+# Verification Signature of Packages ( -Kv for more info )
+[ "$(rpm  -K ${HOME}/src/rpm/backup/"$PACKAGE"/RPMS/* | grep "NOT OK")" ] && BROKEN "Verifying Signature of Packages, rpm -K *.rpm = failed " 
+
+# Count developers
+COUNT_DEV=$(rpm -qpi ${HOME}/src/rpm/backup/"$PACKAGE"/RPMS/* | grep Packager | sort | uniq | sed 's/Packager    : //g' | grep "\S" | wc -l) 
+	DEBUG echo "Count developers = $COUNT_DEV"
+[ $COUNT_DEV -eq 1 ] || BROKEN "Many developers ?"
+#----FOR RPM-----------}
+
+#----FOR SRC-----------{
+# Verification Signature of Packages ( -Kv for more info )
+[ "$(rpm  -K ${HOME}/src/rpm/backup/"$PACKAGE"/SRPMS/* | grep "NOT OK")" ] && BROKEN "Verifying Signature of Packages, rpm -K *.rpm = failed " 
+
+# Verification src.rpm file or missing."
+COUNT_SRC=$(ls ${HOME}/src/rpm/backup/"$PACKAGE"/SRPMS/*src.rpm | wc -l)
+	DEBUG echo "Count src.rpm = $COUNT_SRC"
+[ $COUNT_DEV -eq 1 ] || BROKEN "Many src.rpm files ?"
+#----FOR SRC-----------}
+
+	DEBUG echo "Errors = $EMPTY"
+if [ "$EMPTY" -ne "0" ];then 
+	mkdir -p ~/src/rpm/BROKEN
+	[ -d "${HOME}/src/rpm/BROKEN/$PACKAGE" ] && rm -rf "${HOME}/src/rpm/BROKEN/$PACKAGE"
+	mv -v ${HOME}/src/rpm/backup/"$PACKAGE" ${HOME}/src/rpm/BROKEN/
+	exit 1
+fi
+#-----------------------------------{
+
+#-----------------------------------------{
+CLAMSCAN_OLD()
+{
+	echo " Scanning files ..."
+	clamscan --bell --infected  --no-summary -r ${HOME}/src/rpm/backup/"$PACKAGE"
+	if [ "$?" -ne 0 ];then
+		BROKEN "Files are infected, $PACKAGE moving to ${HOME}/src/rpm/BROKEN/"
+		[ -d "${HOME}/src/rpm/BROKEN/$PACKAGE" ] && rm -rf "${HOME}/src/rpm/BROKEN/$PACKAGE"
+		mv -v ${HOME}/src/rpm/backup/"$PACKAGE" ${HOME}/src/rpm/BROKEN/
+		exit 1
+	fi
+}
+CLAMSCAN()
+{
+echo -e "\n Scanning files ..."
+# Unpack files
+mkdir -p $HOME/src/rpm/backup/"$PACKAGE"/TEST
+cd $HOME/src/rpm/backup/"$PACKAGE"/TEST
+for PATH_N in $(find ${HOME}/src/rpm/backup/"$PACKAGE" -name '*.rpm'); do 
+     #DEBUG echo "$PATH_N"
+     rpm2cpio ${PATH_N} | cpio -idm
+done
+cd -
+
+clamscan --bell --infected  --no-summary -r ${HOME}/src/rpm/backup/"$PACKAGE"
+	if [ "$?" -ne 0 ];then
+		BROKEN "Files are infected, $PACKAGE moving to ${HOME}/src/rpm/BROKEN/"
+		[ -d "${HOME}/src/rpm/BROKEN/$PACKAGE" ] && rm -rf "${HOME}/src/rpm/BROKEN/$PACKAGE"
+		mv -v ${HOME}/src/rpm/backup/"$PACKAGE" ${HOME}/src/rpm/BROKEN/
+		exit 1
+	fi
+rm -rf $HOME/src/rpm/backup/"$PACKAGE"/TEST
+}
+[ "$CLAMSCAN1" == "on" ] && CLAMSCAN
+#-----------------------------------------{
+
+#-------------------------------------------------{
+LOCAL_REPO()
+{
+echo -e "\n Create local repository"
+[ "$(ls -A $HOME/src/rpm/backup/)" ] || BROKEN "Problem with script: folder $HOME/src/rpm/backup/ is empty:"
+[ "$EMPTY" -ne "0" ] && exit 1
+rm -rf ${HOME}/src/apt/uplos/RPMS.local_repo/*
+mkdir -p ${HOME}/src/apt/uplos/RPMS.local_repo/
+BACKUP_LIST=$(ls $HOME/src/rpm/backup/)
+
+for i in ${BACKUP_LIST}; do
+	#DEBUG echo $i
+	ln -s $HOME/src/rpm/backup/$i/RPMS/* $HOME/src/apt/uplos/RPMS.local_repo/
+done
+
+echo "Create database."
+genbasedir --flat --bloat --progress $HOME/src/apt/uplos local_repo
+LINK_REPO="rpm file:${HOME}/src/apt/ uplos local_repo"
+
+if ! grep -q "$LINK_REPO" /etc/apt/sources.list ; then
+	echo " "
+	BROKEN "To active local repository add to /etc/apt/sources.list "
+	echo "$LINK_REPO" 
+	BROKEN "Remeber also use: apt-get update , before: apt-get install ..."
+	echo " "
+fi
+}
+
+[ "$LOCAL_REPO1" == "on" ] && LOCAL_REPO
+#-------------------------------------------------}
+
+
+echo -e "\n Completion successfully."

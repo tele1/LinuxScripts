@@ -1,0 +1,521 @@
+#! /bin/bash
+
+#       Name:    findreq_cmake
+#       Version: 6
+#       License:  GPL v3
+#       https://gnu.org/licenses/gpl.html
+#		Written by: tele
+
+
+#	- This script find rpm dependencies from CMakeCache.txt,
+#	  also can find QML dependencies from .qml files.
+#
+#	- CMakeCache.txt is created after build app from source code and when for build app was used cmake.
+#	  This is useful for find " BuildRequires: " for .spec file (rpm package build).
+#-----------------------
+#		$ cmake ..
+#		$ make
+#-----------------------
+#	  Script use to analize dependencies using file from:  ~/src/rpm/BUILD/name_package/build/CMakeCache.txt
+#
+#   - QML scipts can be found only in source code (not found in folder build after compile)
+#	- This is useful for find " Requires: " for .spec file (rpm package build).
+#	  This script use qmlmod.list to find paths for qml modules.
+#	  qml modules is file created from script "findmodules_qml"
+#		
+# Script made for PCLinuxOS
+#
+# Dependencies: awk , sed , rpm , find , cat , grep , sort , uniq , rev , rm 
+
+
+#  ----- How Use ? -----
+#			 ./findbuildreq_cmake
+
+
+#		Example output:
+# Path: /home/gg/src/rpm/BUILD/photoqt-1.3/build/CMakeCache.txt 
+
+
+# Fouded Build dependencies:
+# BuildRequires:  binutils
+# BuildRequires:  gcc
+# BuildRequires:  gcc-c++
+# BuildRequires:  GraphicsMagick-devel
+# BuildRequires:  %{_lib}qt5core-devel
+# BuildRequires:  %{_lib}qt5gui-devel
+# BuildRequires:  %{_lib}qt5network-devel
+# BuildRequires:  %{_lib}qt5qml-devel
+# BuildRequires:  %{_lib}qt5quick-devel
+# BuildRequires:  %{_lib}qt5sql-devel
+# BuildRequires:  %{_lib}qt5svg-devel
+# BuildRequires:  %{_lib}qt5widgets-devel
+# BuildRequires:  make
+
+#========================================================================================================
+
+
+
+
+
+VERBOSE=0
+
+
+# check which user I am
+aa=$(whoami)
+
+
+# don't use root account
+if echo $aa | grep -q "root"
+	then
+		echo "Please don't use root auccount for this script. ! "
+		echo "I suggest use plain user account."
+		exit
+fi
+
+
+
+#----------- Menu -------------------------------------------------------{
+# for i in $1
+#do
+	case $1 in
+		--debug|-d)
+			VERBOSE=1
+			echo "Debug ON"
+
+					# check file
+					if [ -d "$2" ]; then 
+						echo "OK, path for folder exist"
+
+						# path
+						ab="$2"
+						aba=$(find "$2" -name CMakeCache.txt)
+					else 
+
+
+						# if variable $1 is empty
+						if [ -z $2 ]; then
+							ab="/home/$aa/src/rpm/BUILD"
+							# find  CMakeCache.txt files
+							aba=$(find /home/$aa/src/rpm/BUILD -name CMakeCache.txt)
+						else
+							echo -e "\n Error: \n Folder not exist.\n"
+							echo "Try use: $0 --help"
+							exit 1
+						fi
+
+					fi
+
+		;;
+		--help|-h)
+			echo "-------------------------------------------------------"
+			echo "usage: $0 --debug /path/to/source_code/"
+			echo "-------------------------------------------------------"
+			echo "--debug: verbose output for debugging"
+			echo "--help: show options"
+			echo " "
+			echo "      This script find BuildRequires dependencies from "
+			echo -e "   BUILD folder if you used cmake for build app. \n"
+       exit
+       ;;
+       *)
+					# check file
+					if [ -d "$1" ]; then 
+						echo "OK, path for folder exist"
+
+						# path
+						ab="$1"
+						aba=$(find "$1" -name CMakeCache.txt)
+					else 
+						# if variable $1 is empty
+						if [ -z $1 ]; then
+							ab="/home/$aa/src/rpm/BUILD"
+							# find  CMakeCache.txt files
+							aba=$(find /home/$aa/src/rpm/BUILD -name CMakeCache.txt)
+						else
+							echo -e "\n Error: \n Folder not exist or unknown option.\n"
+							echo "Try use: $0 --help"
+							exit 1
+						fi
+
+					fi
+
+       ;;
+   esac
+#done
+#----------- Menu -------------------------------------------------------}
+
+
+
+# path
+echo "Source Code Path: $ab"
+
+# CMakeCache.txt
+echo "CMakeCache.txt Path: $aba"
+
+
+
+
+
+
+
+
+# count lines
+# problem is "wc" and "echo" not cooperate together,
+
+# "  ' echo  ' 
+#  A text line by definition ends with a newline.
+# This has been standardized to prevent different implementations from
+# implementing it differently and creating portability problems.
+# Therefore all standards compliant implementations must implement it in
+# the same way to prevent portability problems. "
+
+# example:
+#
+#	$ a="j" ; echo  "$a"  |  wc -l
+#	1
+#
+#	$ a="" ; echo  "$a"  |  wc -l
+#	1
+#
+#	$ a="" ; echo -n "$a"  |  wc -l
+#	0
+#
+#	$ a="j" ; echo -n "$a"  |  wc -l
+#	0
+
+
+# count lines ( this count will work )
+ac=$(echo "$aba" | sed '/^\s*$/d' | wc -l)
+ 
+
+
+
+
+#---------------------------------------------{
+# check how much lines is and choose
+if [ "$ac" = "1" ]
+		then
+			echo "1 line result - ok" 
+elif  [ "$ac" -lt "1" ]
+		then
+			echo "CMakeCache.txt not found inside BUILD folder."
+			exit 1
+else 
+			echo "Too many CMakeCache.txt found." 
+			echo "$aba" | nl
+			echo " "
+			echo -e "Choose line, from which we will check dependencies \n"
+			echo -e "\n I suggest choose someting like: \n /home/user_name/src/rpm/BUILD/app_name/build/CMakeCache.txt \n"
+			read line
+			echo "You choose line $line :"
+			ad=$(echo "$aba" | awk 'NR=="'"$line"'"')
+			echo "$ad"
+			echo " "
+
+			if [ -z $ac ]
+				then
+					echo "Sorry but probably you choose wrong line."
+					exit 1
+			fi
+			
+			# confirm $aba, path CMakeCache.txt
+			ab=$ad
+
+fi
+#---------------------------------------------}
+
+
+
+
+
+
+#--------{
+# Check - if folder exist remove and create new folder, this will temorary folder.
+if [ -d ~/tmp/CheckCmakecache ]
+then
+	rm -fvr ~/tmp/CheckCmakecache
+	mkdir ~/tmp/CheckCmakecache
+else
+	mkdir ~/tmp/CheckCmakecache
+fi
+#--------}
+
+
+
+
+
+
+
+
+#----------------------------{
+# parse CMakeCache.txt
+cat $aba | grep "DIR:PATH=/" | grep -v "CMAKE_INSTALL" | cut -d "=" -f2 > ~/tmp/CheckCmakecache/1.dir.cmakecache.list
+
+
+cat $aba | grep "FILEPATH=/" | grep -v "CMAKE_INSTALL" | cut -d "=" -f2 > ~/tmp/CheckCmakecache/1.file.cmakecache.list
+#----------------------------}
+
+
+
+
+
+
+#-------- check 1.dir.cmakecache.list ----------------------------------------------------------------{
+
+# count lines
+ae=$(cat ~/tmp/CheckCmakecache/1.dir.cmakecache.list | wc -l) 
+
+
+
+
+#--------------------------------------------------------------------{
+# check if file is empty
+if [ -z $ae ]
+then
+	echo "Sorry but in .../tmp/1.dir.cmakecache.list not exist dependencies."
+	variable1=0
+else
+
+
+
+
+# Loop ---------------------------------------------------
+for i in `seq 1 $ae`
+do
+       echo "Loop nr: $i / $ae 1.dir.listBuildRequires"
+
+
+       # af=line $i from 1.dir.listBuildRequires file
+       af=$(awk 'NR=='$i  ~/tmp/CheckCmakecache/1.dir.cmakecache.list)
+
+
+
+		echo "$af - af" 
+
+
+
+#        Exceptions:
+#        This paths provide filesystem-2.1.9-1pclos2009
+		if [ $af = /etc ]; then
+           echo ""
+		elif [ $af = /usr/include ]; then
+           echo ""
+		elif [ $af = /usr/lib ]; then
+           echo ""
+		elif [ $af = /usr/lib64 ]; then
+			echo ""
+		else
+
+
+
+           # ag = find name package from path, and redirect errors to standard output
+           ag=$(rpm -q --whatprovides $af 2>&1)
+
+
+			#  if echo $ag | grep -q "is not owned by any package"
+			if [ $? -ne 0 ]
+            then
+					echo "-------------------" >> ~/tmp/CheckCmakecache/Errors.log 
+                    echo "Not found package." 
+                    echo "Not found package, used line $i in 1.dir.cmakecache.list ." >> ~/tmp/CheckCmakecache/Errors.log
+					echo "rpm -q --whatprovides $af" >> ~/tmp/CheckCmakecache/Errors.log 
+					echo "$ag"    >> ~/tmp/CheckCmakecache/Errors.log 
+					echo "-------------------" >> ~/tmp/CheckCmakecache/Errors.log 
+					# rpm -qf path
+            else
+					# founded rpm
+					echo "$ag" >> ~/tmp/CheckCmakecache/2.rpm.list
+       
+            fi
+
+		fi     
+done
+# End Loop ---------------------------------------------------
+
+fi
+#---------- check 1.dir.cmakecache ------------------------------------}
+
+
+
+
+
+
+
+
+
+
+#---------- check 1.file.cmakecache -----------------------------------------{
+
+# count lines
+ah=$(cat ~/tmp/CheckCmakecache/1.file.cmakecache.list | wc -l) 
+
+
+if [ -z $ah ]
+then
+	echo "Sorry but in .../tmp/1.file.cmakecache.list not exist dependencies."
+	variable1=0
+else
+	# Loop ----------------------
+	for i in `seq 1 $ah`
+	do
+		echo "Loop nr: $i / $ah 1.file.listBuildRequires"
+
+
+		# af=line $i from 1.file.listBuildRequires file
+		aj=$(awk 'NR=='$i  ~/tmp/CheckCmakecache/1.file.cmakecache.list)
+
+
+		# debug
+		echo "$aj - aj" 
+
+
+		#    Exceptions:
+		#    This paths provide filesystem-2.1.9-1pclos2009
+		if [ $aj = /etc ]; then
+           echo ""
+		elif [ $aj = /usr/include ]; then
+           echo ""
+		elif [ $aj = /usr/lib ]; then
+           echo ""
+		elif [ $aj = /usr/lib64 ]; then
+			echo ""
+		else
+			# ag = find name package from path, and redirect errors to standard output
+			ak=$(rpm -q --whatprovides $aj 2>&1)
+
+
+			#  if  $ak  "is not owned by any package"
+			if [ $? -ne 0 ]
+            then
+					echo "-------------------" >> ~/tmp/CheckCmakecache/Errors.log 
+                    echo "Not found package." 
+                    echo "Not found package, line $i in 1.file.cmakecache.list ." >> ~/tmp/CheckCmakecache/Errors.log
+					echo "rpm -q --whatprovides $aj" >> ~/tmp/CheckCmakecache/Errors.log 
+					echo "$ak"    >> ~/tmp/CheckCmakecache/Errors.log 
+					echo "-------------------" >> ~/tmp/CheckCmakecache/Errors.log 
+					# rpm -qf path
+            else
+					# founded rpm
+					echo "$ak" >> ~/tmp/CheckCmakecache/2.rpm.list
+       
+            fi
+		fi
+	done
+
+fi
+#---------- check 1.file.cmakecache ------------------------------------------{
+
+
+
+
+#---- QML Checker -------------------------------------------------{
+# http://doc.qt.io/qt-5/qmlmodules.html
+
+# "Source Code Path: $ab"
+# "CMakeCache.txt Path: $aba"
+
+
+echo -e "\n\n Source Code Path: $ab"
+	# find files
+    find $ab -name '*.qml' > ~/tmp/CheckCmakecache/1.qml.list
+
+	dab=$(cat ~/tmp/CheckCmakecache/1.qml.list   | wc -l)
+	echo "	Founded $dab qml scripts."
+
+
+if [ "$dab" != "0" ]; then 
+
+	grep -r "import" "$ab"  | cut -d":" -f2 | grep Qt | grep -v "translation" | cut -d" " -f2 | sort | uniq > ~/tmp/CheckCmakecache/2.qml.log
+
+	# count lines
+	dac=$(cat ~/tmp/CheckCmakecache/2.qml.log | wc -l)
+	
+	# Loop ---------------------
+	for i in `seq 1 $dac`
+	do
+		echo "Loop nr: $i / $dac 2.qml.log"
+
+		# line from file
+		dad=$(awk 'NR=='$i ~/tmp/CheckCmakecache/2.qml.log)
+
+		# qml module path
+		dae=$(cat qmlmod.list | grep "module $dad" | cut -d":" -f1)
+
+		rpm -qf "$dae" >> ~/tmp/CheckCmakecache/3.qml.rpm.list
+	done
+fi
+
+
+
+#---- QML Checker -------------------------------------------------}
+
+
+
+
+#-----------------------------{
+if [ "$VERBOSE" = 0 ]; then
+		# this clean terminal
+		printf "\ec"
+fi
+#-----------------------------}
+
+
+
+
+
+
+
+
+# --  output to terminal -----------{
+echo -e "\n CMakeCache.txt Path: $aba \n"
+echo -e "\nFouded Build dependencies:"
+cat ~/tmp/CheckCmakecache/2.rpm.list | sort | uniq | rev | cut -d"-" -f 3- | rev | awk '{printf "BuildRequires:  " $1 "\n" }' | sed -e 's/lib64/%{_lib}/g'
+
+
+echo -e "\n\n Source Code Path: $ab"
+echo "	Founded $dab qml scripts."
+echo " "
+
+if [ "$dab" != "0" ]; then 
+cat ~/tmp/CheckCmakecache/3.qml.rpm.list | sort | uniq | rev | cut -d"-" -f 3- | rev | awk '{printf "Requires:  " $1 "\n" }' | sed -e 's/lib64/%{_lib}/g'
+
+fi
+
+
+
+#----------------------------------
+if [ -f ~/tmp/CheckCmakecache/Errors.log ]
+then
+	if [ "$VERBOSE" = 0 ]; then
+    	echo -e "\n Some script problems found \n run \n findreq_cmake --debug \n option to see errors. \n"
+	else
+		echo -e "\n Some script problems found. "
+		echo -e "Now you can read errors in  ~/tmp/CheckCmakecache/Errors.log \n"
+	fi
+fi
+#-----------------------------------
+
+
+# --  output to terminal -----------}
+
+
+
+
+
+
+
+
+
+
+#-- Clean files -------------------------{
+if [ "$VERBOSE" = 0 ]; then
+		# Clean files
+		#echo " Delete temporary files."
+		rm -frv  ~/tmp/CheckCmakecache > /dev/null	
+fi
+#-- Clean files ------------------------}
+
+
+
+
+

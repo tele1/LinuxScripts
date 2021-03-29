@@ -1,0 +1,22 @@
+#!/bin/bash
+
+
+# Created for UPLOS Linux
+# http://www.liberainformatica.it/forum/forumdisplay.php?fid=25
+
+# License: GNU GPL v.3
+# Version 1
+# Destiny: This is only example, for create and update apt-rpm repository.
+# Usage: ./script
+
+
+echo " --> Update rpm ..."
+genbasedir --flat --bloat --progress /media/rep/UPLOS/32bit \
+kde4 kde4-test kde5 kde5-test \
+mate mate-test cinnamon-test xfce4 xfce4-test \
+nonfree updates test devel
+  
+
+echo "                       "
+echo " --> Update src.rpm ..."
+genbasedir --flat --bloat --progress /media/rep/UPLOS/srpms uplos

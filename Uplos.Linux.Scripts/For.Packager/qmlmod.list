@@ -1,0 +1,22 @@
+/usr/lib64/qt5/qml/QtQml/StateMachine/qmldir:module QtQml.StateMachine
+/usr/lib64/qt5/qml/QtQml/Models.2/qmldir:module QtQml.Models
+/usr/lib64/qt5/qml/QtQuick/XmlListModel/qmldir:module QtQuick.XmlListModel
+/usr/lib64/qt5/qml/QtQuick/Layouts/qmldir:module QtQuick.Layouts
+/usr/lib64/qt5/qml/QtQuick/LocalStorage/qmldir:module QtQuick.LocalStorage
+/usr/lib64/qt5/qml/QtQuick/Controls/Private/qmldir:module QtQuick.Controls.Private
+/usr/lib64/qt5/qml/QtQuick/Controls/Styles/qmldir:module QtQuick.Controls.Styles
+/usr/lib64/qt5/qml/QtQuick/Controls/qmldir:module QtQuick.Controls
+/usr/lib64/qt5/qml/QtQuick/PrivateWidgets/qmldir:module QtQuick.PrivateWidgets
+/usr/lib64/qt5/qml/QtQuick/Dialogs/Private/qmldir:module QtQuick.Dialogs.Private
+/usr/lib64/qt5/qml/QtQuick/Dialogs/qmldir:module QtQuick.Dialogs
+/usr/lib64/qt5/qml/QtQuick/Window.2/qmldir:module QtQuick.Window
+/usr/lib64/qt5/qml/QtQuick/Particles.2/qmldir:module QtQuick.Particles
+/usr/lib64/qt5/qml/Qt/labs/folderlistmodel/qmldir:module Qt.labs.folderlistmodel
+/usr/lib64/qt5/qml/Qt/labs/settings/qmldir:module Qt.labs.settings
+/usr/lib64/qt5/qml/Qt/WebSockets/qmldir:module Qt.WebSockets
+/usr/lib64/qt5/qml/QtAudioEngine/qmldir:module QtAudioEngine
+/usr/lib64/qt5/qml/QtQuick.2/qmldir:module QtQuick
+/usr/lib64/qt5/qml/QtMultimedia/qmldir:module QtMultimedia
+/usr/lib64/qt5/qml/QtPositioning/qmldir:module QtPositioning
+/usr/lib64/qt5/qml/QtTest/qmldir:module QtTest
+

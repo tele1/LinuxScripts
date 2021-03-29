@@ -1,0 +1,8 @@
+
+
+ Search file script is used for search file from PCLinuxOS repository,
+ have name apt3.sh. 
+
+
+ Search file script is in https://github.com/tele1/REPO
+ because with database files is bigger.

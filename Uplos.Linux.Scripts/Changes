@@ -1,0 +1,14 @@
+
+	03.2019
+- added fin.dep.sh to find bash script dependencies
+_________________________________
+	11.2017
+- added script build
+        2017
+- added script clean.repository ( libs are shared, you don't need remove )
+- added script check.test.section.sh
+- added rep.s for sort packages in repository
+_________________________________
+	8.10.2015
+- changed the names of some files 
+- added qml support for "findreq_cmake"

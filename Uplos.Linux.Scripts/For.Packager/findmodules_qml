@@ -1,0 +1,22 @@
+#!/bin/bash
+
+
+
+
+# This script help you find all qml modules installed in your system and save output to qmlmod.list file.
+# Before use this script you need install all qt5 modules.
+#
+#	This script is created for findreq_cmake script.
+#	findmodules_qml create qmlmod.list with path and name module,
+#	findreq_cmake script read qmlmod.list to find path qml module.
+#
+# Doc:  http://doc.qt.io/qt-5/qmlmodules.html
+
+# Example output this script:
+#	/usr/lib64/qt5/qml/QtQml/StateMachine/qmldir:module QtQml.StateMachine
+#	/usr/lib64/qt5/qml/QtQml/Models.2/qmldir:module QtQml.Models
+
+
+
+
+grep -r "module" "/usr/lib64/qt5/qml/" | grep qmldir > qmlmod.list
