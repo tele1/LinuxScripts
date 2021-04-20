@@ -29,6 +29,14 @@
 [ -z "$1" ] && { echo "Nie podano adresu www" ; exit 1 ;}
 
 
+# Kolory
+NC='\e[0m'    # Reset Color
+BL='\e[0;36m' # Cyan ECHO
+GN='\e[0;32m' # Green ECHO
+YW='\e[0;33m' # Yellow ECHO
+RD='\e[0;31m' # Red ECHO
+
+
 # Wydobądź wszystkie adresy | wyświetl jesli 4 kolumna zawiera NS
 LISTA_ADRESOW=$(dig +trace +dnssec "$1" |  awk '$4 ~ /NS$/' |  awk '{ print $5 }')
 
@@ -80,7 +88,8 @@ while read WEB ; do
 
     ##for LINIA in `seq 1 $LICZBA_LINII_RAPORTU` ; do
     while read LINIA ; do
-        echo "$LINIA"
+        #  Wyświetl linie na zielono
+        echo -e "${GN}$LINIA${NC}"
         NR_LINII=$[$NR_LINII+1]
         
         # Poniżej 3 linii
@@ -90,16 +99,19 @@ while read WEB ; do
             # Policzenie slow jako sposob czy podano IP
             LICZBA_SLOW=$(echo "$LINIA" | wc -w)
             if [ "$LICZBA_SLOW" -eq "10" ] ; then
-                LOSS=$(awk '{ print $4 }' <<< "$LINIA" | sed "s/%//g")
+                # Kolumna LOSS bez procentu i bez liczb dziesietnych
+                LOSS=$(awk '{ print $4 }' <<< "$LINIA" | sed -e "s/%//g" -e "s/\.[0-9]//g")
             else
-                LOSS=$(awk '{ print $3 }' <<< "$LINIA" | sed "s/%//g")
+                LOSS=$(awk '{ print $3 }' <<< "$LINIA" | sed -e "s/%//g" -e "s/\.[0-9]//g")
             fi
 
 
-            if [[ "$LOSS" == "0.0" ]] ; then
+            if [ "$LOSS" -lt "100" ] ; then
                 # Alternatywa:  https://www.whois.com/whois/
                 ##echo "Debug: $WEB = $LOSS"
-                whois -IHM "$WEB" | grep  "@\|contact"
+                KONTAKT=$(whois -IHM "$WEB" | grep  "@\|contact")
+                # Wyświetl kontakt w kolorze Cyan
+                echo -e "${BL}${KONTAKT}${NC}"
             fi
         fi
     done <<< "$RAPORT"
