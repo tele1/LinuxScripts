@@ -278,8 +278,8 @@ echo " "
 MESSAGE_INFO "Example of the code for your shell script:"
 echo " "
 
-echo "# Check Dependecies"
-echo "# List created automatically by $0 version=${VERSION} source=${SOURCE}"
+echo "###########################}"
+echo "# Check Dependecies - List created automatically by $0 version=${VERSION} source=${SOURCE}"
 while IFS= read -r DEPEND ; do
     echo  "[[ -z \$(type -P "${DEPEND}") ]] && DEP=\"\$DEP\"$'\n'\"${DEPEND}\""
 done <<< "${LIST_OF_DEPEND_ALL}"
@@ -287,6 +287,7 @@ done <<< "${LIST_OF_DEPEND_ALL}"
 echo " "
 echo '# End script if exist any error'
 echo '[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}'
+echo "###########################}"
 echo " "
 echo  '#==============='
 
