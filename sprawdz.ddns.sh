@@ -3,7 +3,7 @@
 
 # Developed for Linux
 # License: GNU GPL v.3
-# Version 1
+# Version 2
 # Destiny: Script for check DDNS
 # Script usage: bash script name.freedns.com
 
@@ -77,6 +77,7 @@ LISTA_NIEPRAWIDLOWOSCI=$(awk '{ print $1 }' <<< "$LISTA_NIEPRAWIDLOWOSCI")
 
 while read WEB ; do
     echo "=================="
+    echo "mtr $WEB"
     # Raport rozciagniety, z adresem IP, testowany x razy | bez hostname
     RAPORT=$(mtr --report-wide --show-ips -c 10 "$WEB"  | sed "s/HOST: `hostname`/            /g")
 
