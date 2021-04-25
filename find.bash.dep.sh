@@ -1,7 +1,7 @@
 #! /bin/bash 
 
 # Licence: GNU GPL v3  https://www.gnu.org/licenses/gpl-3.0.html
-  VERSION="7"
+  VERSION="8"
   SOURCE="https://github.com/tele1/LinuxScripts"
 # Destiny:      Script to find dependencies from *.bash and *.sh files
 # Script use:	Name_of_script --check /path/to/next/script
@@ -279,7 +279,8 @@ MESSAGE_INFO "Example of the code for your shell script:"
 echo " "
 
 echo "###########################}"
-echo "# Check Dependecies - List created automatically by $0 version=${VERSION} source=${SOURCE}"
+echo "# Check Dependecies - List created automatically by $0 version=${VERSION} "
+echo "# source=${SOURCE}"
 while IFS= read -r DEPEND ; do
     echo  "[[ -z \$(type -P "${DEPEND}") ]] && DEP=\"\$DEP\"$'\n'\"${DEPEND}\""
 done <<< "${LIST_OF_DEPEND_ALL}"
