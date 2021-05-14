@@ -1,0 +1,110 @@
+#!/bin/bash
+
+
+# Developed for Linux
+# License:		GNU GPL v.3
+# Version:		1
+# Destiny:		Script for translate part of file /proc/net/tcp
+# Script usage: bash script
+
+
+#	https://stackoverflow.com/questions/31158397/find-the-network-address-from-proc
+#	https://blog.oddbit.com/post/2015-03-08-converting-hexadecimal-ip-addr/
+
+
+# Check root running
+[[ $EUID -ne 0 ]] && echo -e "'\e[0;31m' This script must be run as root. '\e[0m'" && exit 1
+
+
+###########################}
+# Check Dependecies - List created automatically by find.bash.dep.sh version=8 
+# source=https://github.com/tele1/LinuxScripts
+[[ -z $(type -P awk) ]] && DEP="$DEP"$'\n'"awk"
+[[ -z $(type -P cat) ]] && DEP="$DEP"$'\n'"cat"
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P grep) ]] && DEP="$DEP"$'\n'"grep"
+[[ -z $(type -P lsof) ]] && DEP="$DEP"$'\n'"lsof"
+[[ -z $(type -P printf) ]] && DEP="$DEP"$'\n'"printf"
+[[ -z $(type -P sed) ]] && DEP="$DEP"$'\n'"sed"
+[[ -z $(type -P tac) ]] && DEP="$DEP"$'\n'"tac"
+[[ -z $(type -P tr) ]] && DEP="$DEP"$'\n'"tr"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+###########################}
+
+
+HEX_TO_DEC_ADDRESS() {
+HEX_IP=$(awk -F ':' '{print $1}' <<< "$1")
+HEX_PORT=$(awk -F ':' '{print $2}' <<< "$1")
+
+DIVIDED_IP=$(sed 's/../\n&/g' <<< "$HEX_IP" | tac)
+DEC_IP=''
+
+while read LINE ; do
+	# Convert from hexadecimal to decimal
+	CONVERT_TO_DECIMAL=$[16#${LINE}]
+	DEC_IP="${DEC_IP}.${CONVERT_TO_DECIMAL}"
+done <<< "$DIVIDED_IP"
+
+# Without dot at begin
+DEC_IP=$(sed 's/^\.//g' <<< "$DEC_IP")
+
+DEC_PORT=$[16#${HEX_PORT}]
+#echo "$DEC_PORT"
+}
+
+
+NET_TCP=$(cat /proc/net/tcp)
+cat /proc/net/tcp
+echo "============"
+
+while read LINE ; do
+
+	#echo "$LINE"
+	#	if this is not text / first line
+	if $(grep -q ^"sl" <<< "$LINE")  ; then
+		echo "  $LINE" | tr ' ' '  '
+	else
+		#echo "$LINE"
+
+		# Because something will change variable but I need for leter , so I need next variable
+		LINE_2="$LINE"
+		ARG_1=$(echo "$LINE_2" |  awk '{print $1}')
+		HEX_LOCAL_ADDRESS=$(awk -F ' ' '{print $2}' <<< "$LINE")
+		HEX_TO_DEC_ADDRESS "$HEX_LOCAL_ADDRESS"
+		DEC_LOCAL_ADDRESS="${DEC_IP}:${DEC_PORT}"
+		#echo $DEC_LOCAL_ADDRESS
+
+
+		HEX_REM_ADDRESS=$(awk -F ' ' '{print $3}' <<< "$LINE_2")
+		HEX_TO_DEC_ADDRESS "$HEX_REM_ADDRESS"
+		DEC_REM_ADDRESS="${DEC_IP}:${DEC_PORT}"
+		
+		#echo "$ARG_1 ${DEC_LOCAL_ADDRESS} ${DEC_REM_ADDRESS}"
+		printf "%4s | %20s -> %20s \n" "$ARG_1" "${DEC_LOCAL_ADDRESS}" "${DEC_REM_ADDRESS}" 
+
+	fi
+
+done <<< "$NET_TCP"
+
+echo "============"
+#lsof -i :0-65535
+lsof -Pi :0-65535 |  nl -s:" "
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
