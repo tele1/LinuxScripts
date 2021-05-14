@@ -7,7 +7,7 @@
 # License:		GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
 # Version		1
 # Destiny:		Script to check whether unnecessary packages are installed.
-#               The package list is tailored to my needs. 
+#               The package list is created to my needs. 
 #			    I am not responsible for other people's needs.
 # Script usage:		bash script
 
