@@ -1,0 +1,247 @@
+#!/bin/bash
+
+
+# Developed only for Linux Mint  20.1 Ulyssa
+# For own use.
+
+# License:		GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+# Version		1
+# Destiny:		Script to check whether unnecessary packages are installed.
+#               The package list is tailored to my needs. 
+#			    I am not responsible for other people's needs.
+# Script usage:		bash script
+
+##	LINKS:
+##  awk colors: awk: warning: escape sequence `\e' treated as plain `e'
+##  https://stackoverflow.com/questions/14482101/awk-adding-color-code-to-text
+
+
+LIST='bluez
+bluez-obexd
+bluez-tools
+avahi-autoipd
+avahi-daemon
+avahi-utils
+libnss-mdns
+ghostscript
+ghostscript-x
+printer-driver-pnm2ppa
+printer-driver-ptouch
+printer-driver-sag-gdi
+libcamel
+evolution-data-server
+evolution-data-server-common
+libebackend
+libebook
+libecal
+libedata-book
+libedata-cal
+libedataserver
+libedataserverui
+cmake-data
+libavahi-client3
+libavahi-common-data
+libavahi-common3
+libcups2
+libdbus-1-3
+libgmp10
+libgnutls30
+libgssapi-krb5-2
+libhogweed5
+libjsoncpp1
+libk5crypto3
+libkeyutils1
+libkrb5-3
+libkrb5support0
+libnettle7
+libp11-kit0
+librhash0
+libssl1.1
+libtasn1-6
+xdg-desktop-portal
+xdg-desktop-portal-gtk
+samba-libs
+language-pack-gnome-en
+language-pack-gnome-en-base
+language-pack-gnome-pl
+language-pack-gnome-pl-base
+libtracker-control
+libtracker-miner
+libtracker-sparql
+easytag-nautilus
+nautilus
+tracker
+tracker-extract
+tracker-miner-fs
+libfprint-2-2
+libfprint-2-tod1
+fwupd
+fwupd-signed
+libfwupd2
+libfwupdplugin1
+thunderbird
+thunderbird-gnome-support
+thunderbird-locale-en
+thunderbird-locale-en-us
+thunderbird-locale-pl
+network-manager-config-connectivity-ubuntu
+ubuntu-report
+apport
+apport-gtk
+apport-symptoms
+libsmbclient
+libwbclient0
+gvfs-backends
+libmpv1
+vlc-plugin-samba
+7kaa
+tj3
+openssh-client
+hypnotix
+libgnome-autoar-0-0
+thermald
+steam-devices
+systemd-timesyncd
+ubiquity-casper
+ubiquity-slideshow-mint
+mint-live-session
+gparted-common
+ubiquity
+language-selector-common
+python3-pam
+boot-sav
+boot-sav-extra
+python3-debconf
+mokutil
+glade2script
+gparted
+ubiquity-ubuntu-artwork
+ubiquity-frontend-gtk
+boot-repair
+celluloid
+casper
+lupin-casper
+cifs-utils
+python3-samba
+samba-common
+smbclient
+samba-common-bin
+ca-certificates-java
+default-jre-headless
+default-jre
+libreoffice-sdbc-hsqldb
+openjdk-11-jre-headless
+openjdk-11-jre
+brltty
+blueberry
+gnome-bluetooth
+gir1.2-gnomebluetooth-1.0
+pulseaudio-module-bluetooth
+bluetooth
+ntp
+ntpdate
+openvpn
+network-manager-openvpn
+network-manager-openvpn-gnome
+printer-driver-splix
+system-config-printer
+printer-driver-foo2zjs
+hplip
+system-config-printer-gnome
+printer-driver-gutenprint
+system-config-printer-udev
+system-config-printer-common
+python3-cupshelpers
+bluez-cups
+printer-driver-hpcups
+cups-pk-helper
+cups-server-common
+cups-common
+python3-cups
+cups-filters
+cups-ppdc
+cups-filters-core-drivers
+cups-bsd
+cups-core-drivers
+cups-daemon
+cups
+cups-client
+cups-ipp-utils
+cups-browsed
+printer-driver-m2300w
+printer-driver-pxljr
+foomatic-db-compressed-ppds
+foomatic-filters
+mint-meta-mate
+mate-power-manager
+upower
+gir1.2-upowerglib-1.0
+telnet
+secureboot-db
+ftp
+sane-utils
+update-inetd
+libproxy1-plugin-networkmanager
+network-manager-pptp
+network-manager-pptp-gnome'
+
+
+###########################}
+# Check Dependecies - List is not created automatically
+[[ -z $(type -P apt) ]] && DEP="$DEP"$'\n'"apt"
+[[ -z $(type -P awk) ]] && DEP="$DEP"$'\n'"awk"
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P grep) ]] && DEP="$DEP"$'\n'"grep"
+[[ -z $(type -P sort) ]] && DEP="$DEP"$'\n'"sort"
+[[ -z $(type -P uniq) ]] && DEP="$DEP"$'\n'"uniq"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+###########################}
+
+
+
+NC='\e[0m'    # Reset Color
+GN='\e[0;32m' # Green ECHO
+CN='\e[0;36m' # Cyan ECHO
+
+GREEN_ECHO() {
+    echo -e "${GN} $1 ${NC}"
+}
+
+CYAN_ECHO() {
+    echo -e "${CN} $1 ${NC}"
+}
+
+#	Display repeats 
+REPEATS=$( sort <<< "$LIST" | uniq -d)
+if [ ! -z "$REPEATS" ] ; then
+	echo "Warning: The package names are repeated in the list:"
+	echo "$REPEATS"
+	echo "==========="
+fi
+
+
+INSTALLED=$(apt list --installed | sed '1d' | tr ' ' '/' | awk -F '/' '{print $1 "  " "(" $4 ")"}')
+
+GREEN_ECHO "PACKAGE --> FOUND INSTALLED	:ARCHITECTURE"
+while read LINE ; do
+	if $(grep -q "$LINE" <<< "$INSTALLED") ; then
+		LIST_INSTALLED_2=$(grep "$LINE" <<< "$INSTALLED")
+		while read LINE_2 ; do
+			ONLY_NAME=$(awk -F ' ' '{print $1}' <<< "$LINE_2")
+			if [[ "$LINE" == "$ONLY_NAME" ]] ; then
+				##	echo something | awk '{ print "\033[34m"$1" in colour \033[0m";}'
+				COLORED=$(echo "$LINE --> $LINE_2" | awk -F ' '  '{print $1 "	" $2  " " "\33[36m" $3 "\033[0m"  " " $4 ;}')
+				echo -e "$COLORED"
+				#echo "$LINE 	--> $LINE_2"
+			fi
+		done <<< "$LIST_INSTALLED_2"
+	fi
+done <<< "$LIST"
+
+
+
+
+
+
