@@ -1,0 +1,46 @@
+#!/bin/bash
+
+
+# Developed for Linux
+# License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+# Version 1
+# Destiny: To build list of possible internet connections from repository list.
+# Script usage: bash script
+
+
+##	List of active repositories in the system 
+LIST_REPO=$(inxi -r | grep '.: deb' | awk '{print $3}' | awk -F '/' '{print $3}')
+
+
+##	Domain name list 
+while read LINE ; do 
+	SOME_IP=$(host "$LINE")
+	while read LINE ; do 
+		ONE_IP=$(awk -F 'address ' '{print $2}' <<< $LINE)
+		#HOST=$(host <<< "$ONE_IP" | awk -F 'pointer' '{print $2}')
+		HOST=$(host "$ONE_IP" | awk -F 'pointer ' '{print $2}')
+		echo "$LINE = domain $HOST"
+	done <<< "$SOME_IP"
+done <<< "$LIST_REPO"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

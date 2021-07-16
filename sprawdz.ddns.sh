@@ -3,7 +3,7 @@
 
 # Developed for Linux
 # License: GNU GPL v.3
-# Version 4
+# Version 5
 # Destiny: Script for check DDNS
 # Script usage: bash script name.freedns.com
 
@@ -226,7 +226,7 @@ done
 }
 
 
-case $1 in
+case "$1" in
 	"--help"|"-h")
 		echo "---------------------------------------------------------"
 		echo " Script for DNS testing. "
@@ -235,12 +235,12 @@ case $1 in
 		echo " Usage:   $0 your_DDNS"
 		echo " "
 		echo " Options:"
-		echo "   -h  --help         Show this help."
-		echo "       --hosttest     Test dns or your server availability with host commmand"
-		echo "       --digtest      Test dns or your server availability with dig commmand"
+		echo "                      No options --> Trace DDNS + whois --> main script task"
 		echo "       --answer       Test answer with a few DNS"
+		echo "       --digtest      Test dns or your server availability with dig commmand"
+		echo "       --hosttest     Test dns or your server availability with host commmand"
 		echo "       --fasterdns    Speed test with a few DNS"
-		echo "                      Trace DDNS + whois --> main script task"
+		echo "   -h  --help         Show this help."
 		echo "---------------------------------------------------------"
     ;;
     "--hosttest")

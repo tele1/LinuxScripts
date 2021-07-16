@@ -183,7 +183,9 @@ sane-utils
 update-inetd
 libproxy1-plugin-networkmanager
 network-manager-pptp
-network-manager-pptp-gnome'
+network-manager-pptp-gnome
+xul-ext-lightning
+iio-sensor-proxy'
 
 
 ###########################}

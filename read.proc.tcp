@@ -90,7 +90,7 @@ done <<< "$NET_TCP"
 
 echo "============"
 #lsof -i :0-65535
-lsof -Pi :0-65535 |  nl -s:" "
+lsof -Pi :0-65535 | grep -v UDP | nl -s:" " -v -1
 
 
 

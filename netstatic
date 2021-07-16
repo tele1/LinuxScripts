@@ -3,7 +3,7 @@
 
 # Developed for Linux
 # License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Version 1
+# Version 4
 # Destiny: Network connection statistics 
 # Script usage: bash script --help
 
@@ -44,12 +44,14 @@ YW='\e[0;33m' # Yellow ECHO
 RD='\e[0;31m' # Red ECHO
 
 GREEN_ECHO() {
-    echo -e "${GN} $1 ${NC}"
+    echo -e "${GN}${1}${NC}"
 }
 
 YELLOW_ECHO() {
-    echo -e "${YW} $1 ${NC}"
+    echo -e "${YW}${1}${NC}"
 }
+
+
 
 
 #======================================{
@@ -61,17 +63,17 @@ LIST_LSOF=$(lsof -i :0-65535 | sed '1d' | awk '{print $1, $2, $8, $9, $10}')
 while read LINIA ; do
 	DETECT_LOCALHOST=$(awk '{print $3}' <<< "$LINIA" | awk -F ':' '{print $1}')
 	if [[ "$DETECT_LOCALHOST" == 'localhost' ]] ; then 
-		NOWA_LINIA=""
+		NEW_LINE=""
 	else
-		NOWA_LINIA="$LINIA"
+		NEW_LINE="$LINIA"
 	fi
 
-	NOWE_LINIE=$(echo -e "${NOWE_LINIE}\n${NOWA_LINIA}")
+	NEW_LINES=$(echo -e "${NEW_LINES}\n${NEW_LINE}")
 done <<< "$LIST_LSOF"
 
 
 # Delete blank line at the beginning 
-NOWE_LINIE=$(grep -v -e '^$' <<< "$NOWE_LINIE")
+NEW_LINES=$(grep -v -e '^$' <<< "$NEW_LINES")
 }
 #======================================}
 
@@ -79,26 +81,165 @@ NOWE_LINIE=$(grep -v -e '^$' <<< "$NOWE_LINIE")
 LIST_APPS() {
 LIST_NET
 # List of identical processes 
-awk  '{print $1, $2}' <<< "$NOWE_LINIE" | uniq -c | awk  '{print $1, $2}'
+awk  '{print $1, $2}' <<< "$NEW_LINES" | uniq -c | awk  '{print $1, $2}'
 }
 
 
+#============================================================================{
+PROC.OF.PSTREE_2() {
+#		This is instead of command "pstree -spa"
+
+
+PID="$@"
+#echo "PID = $PID"
+
+# For Part Above of lines
+KOLUMN=0 ;
+OLD_NUMBER_CHARS=0
+# For Part Below
+BREAK=0
+
+while IFS=',' read -r A B ; do
+
+	LINE="${A} ${B}"
+	#echo "$LINE"
+
+
+	##	== Part Above of lines ==
+	if [[ "$OLD_NUMBER_CHARS" -eq "0" ]] ; then
+		OLD_NUMBER_CHARS="1" 
+		TAB_ABOVE[$KOLUMN]="$LINE"
+	elif [[ "$BREAK" == "0" ]] ; then
+	while IFS='-' read -r SOME_CHARS PROCESS_NAME ; do
+		NUMBER_CHARS="${#SOME_CHARS}"
+
+		# For Debug
+		#echo "NUMBER_CHARS = $NUMBER_CHARS"
+
+		if [[ $NUMBER_CHARS -gt $OLD_NUMBER_CHARS ]] ; then
+			KOLUMN=$[$KOLUMN + 1]
+			TAB3[$KOLUMN]=$NUMBER_CHARS  ;
+			TAB_ABOVE[$KOLUMN]="$LINE"  ;
+		elif [[ $NUMBER_CHARS -eq $OLD_NUMBER_CHARS ]] ; then
+			KOLUMN=$KOLUMN
+			TAB3[$KOLUMN]=$NUMBER_CHARS
+			TAB_ABOVE[$KOLUMN]="$LINE"  ;
+		elif [[ $NUMBER_CHARS -lt $OLD_NUMBER_CHARS ]] ; then
+
+			COUNT_LOCAL=1
+			for L in "${TAB3[@]}"; do
+				if   [[ "$L" -eq "$NUMBER_CHARS" ]] ; then
+					break
+				elif [[ "$L" -gt "$NUMBER_CHARS" ]] ; then
+					break
+				fi
+				COUNT_LOCAL=$[$COUNT_LOCAL + 1]
+			done
+
+			KOLUMN=$COUNT_LOCAL
+			TAB3[$KOLUMN]=$NUMBER_CHARS
+			TAB_ABOVE[$KOLUMN]="$LINE"  ;
+
+			# Remove older from TAB
+			for M in  $( seq $[$COUNT_LOCAL + 1] ${#TAB3[@]} ) ; do
+
+				# For Debug
+				#echo "M= $M"
+				#echo "AA= $[$COUNT_LOCAL + 1] ; $[${#TAB3[@]} - 1] ; ${#TAB3[@]}"
+				#echo "${TAB3[@]}"
+
+				unset TAB3[$M]
+				unset TAB_ABOVE[$M]
+			done
+
+		fi
+		
+		# For Debug
+		#echo "KOLUMN = $KOLUMN"
+		#echo "TAB3 = ${TAB3[@]}"
+		#echo "$LINE"
+
+		OLD_NUMBER_CHARS=$NUMBER_CHARS
+	done <<< "$A"
+	fi
+
+
+	##	== Part Center of lines ==
+	while IFS=' ' read -r PID_LINE OPTIONS ; do
+		#echo "PID_LINE = $PID_LINE"
+		if [[ "$PID_LINE" -eq "$PID" ]] ; then
+
+			# For Debug
+			#echo "SUUUUCCESS $PID"
+			#echo "$LINE"
+
+			PART_CENTER="$LINE"
+
+			BREAK=1
+			IFS="-"; set $A; CHARS="$1" ; SAVE_NUMBER_CHARS=${#CHARS}
+			COUNT_PART_BELOW=0
+			break
+		fi
+	done <<< "$B"
+
+	# Trick
+	if [[ "$BREAK" == "1" ]] ; then
+		BREAK=2
+		continue
+	fi
+
+	##	== Part Below of lines ==
+	if [[ "$BREAK" == "2" ]] ; then
+
+		IFS="-"; set $A; CHARS="$1" ; NUMBER_CHARS=${#CHARS}
+
+		# For Debug
+		#echo " SAVE ; NEW = $SAVE_NUMBER_CHARS ; $NUMBER_CHARS"
+		#echo "$LINE"
+		
+		if [[ "$NUMBER_CHARS" -le "$SAVE_NUMBER_CHARS" ]] ;then
+			break
+		fi
+
+		PART_BELOW[$COUNT_PART_BELOW]="$LINE"
+		COUNT_PART_BELOW=$[$COUNT_PART_BELOW + 1]
+	fi
+
+	#echo "spam wwww"
+done <<< "$PS_TREE"
+#
+#echo "=========={"
+#printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}"
+#echo "==========--"
+#printf "%s\n" "${PART_CENTER}"
+#echo "==========--"
+#printf "%s\n" "${PART_BELOW[@]}"
+#echo "==========}"
+
+if [ ! -z "${PART_CENTER}" ] ; then
+	PROC_PSTREE_OUT=$(printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}" "${PART_CENTER}" "${PART_BELOW[@]}")
+	#echo "$PROC_PSTREE_OUT"
+fi
+}
+#============================================================================}
+
+
 #======================================================{
-LOOP_3() {
+L.SLEEP() {
 	echo "Additional loop options: $2"
 	echo " "
 	GREEN_ECHO "TIME, {SUM OF CONNECTIONS}, NAME, PID:"
 	while true ; do
 		#		" lsof -i -P " alternative (However instead lsof you can try also use " netstat , ss " what you want)
 		ALL_CON=$(lsof -i :0-65535 | sed '1d')
-		PS_TREE=$(pstree -pt)
+		PS_TREE=$(pstree -pa)
 		##		Print sum of connections + app name
 		CON_1=$(awk '{print $1, $2}' <<< "$ALL_CON" | sort | uniq -c | sort)
 
 		OLD_1="$NEW_1"
 		NEW_1="$CON_1"
 
-		## Gor debug
+		## For debug
 		#echo "=={"
 		#echo "$NEW_1" 
 		#echo "$CON_1"
@@ -115,7 +256,7 @@ LOOP_3() {
 					if grep -q "$2" <<< "$LINE" ; then
 						##	Print info about connections this app
 						CONNECTIONS=$(grep "$2" <<< "$ALL_CON")
-						YELLOW_ECHO "CONNECTIONS:"
+						YELLOW_ECHO "  CONNECTIONS:"
 						YELLOW_ECHO "$CONNECTIONS"
 					##	Print tree
 					##  Curiosity: One tree with PID is better --> " pstree -ptsN pid PID_of_app "
@@ -123,13 +264,21 @@ LOOP_3() {
 					##	You can also save the entire output of the "pstree" command to a file / log
 					##  and then inside log you can search PID of the application which you are interested.
 						echo " "
-						YELLOW_ECHO "ONLY SINGLE LINES FROM PSTREE:"
-						LINES_FROM_TREE=$(grep "$2" <<< "$PS_TREE")
-						YELLOW_ECHO "$LINES_FROM_TREE"
+						PID=$(awk '{print $3}' <<< "$LINE")
+						YELLOW_ECHO "PID = $PID"
+						echo " "
+						YELLOW_ECHO "  TREE ONLY ONE PROCESS FROM PSTREE:"
+						PROC.OF.PSTREE_2 "$PID"
+						if [ -z "$PROC_PSTREE_OUT" ] ; then 
+							echo "  PID not found "$PID""
+						else
+							YELLOW_ECHO "$PROC_PSTREE_OUT"
+						fi
+						echo " "
 					## Save whole tree to log
 					#	echo "================" >> /var/log/${0}.log
 					#	echo "$DATE_LOG  $LINE" >> /var/log/${0}.log
-					#	echo "$PS_TREE"         >> /var/log/${0}.log
+					#	echo "$PROC_PSTREE_OUT" >> /var/log/${0}.log
 					fi
 				fi
 			done <<< "$COMPARE"
@@ -140,6 +289,112 @@ LOOP_3() {
 #======================================================}
 
 
+#======================================================{
+L.IP() {
+##		https://unix.stackexchange.com/questions/90627/notify-of-changes-on-a-file-under-proc
+##		https://www.tecmint.com/exploring-proc-file-system-in-linux/
+##		https://www.slashroot.in/proc-file-system-linux-explained
+##		https://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/proc.html
+
+
+if [ ! -f '/var/log/iptables.log' ]; then
+	echo "	Missing /var/log/iptables.log file."
+	echo "	This is for advanced users ! "
+	echo " "
+	exit 0
+fi
+
+
+#---- Configure log ------------------------{
+##		Create file /etc/rsyslog.d/10-iptables.conf
+##		 ( Number 10 from "10-iptables.conf" is to load faster than 50-default.conf
+##	:msg,contains,"[IPTables] " /var/log/iptables.log
+
+
+##		Create file /etc/logrotate.d/iptables
+##	/var/log/iptables.log
+##	{
+##		rotate 2
+##		daily
+##		missingok
+##		notifempty
+##		delaycompress
+##		compress
+##		postrotate
+##			invoke-rc.d rsyslog rotate > /dev/null
+##		endscript
+##	}
+
+
+##		Run command
+##	service rsyslog restart
+
+
+##		Set Firewall iptables, for example:
+##	iptables -N CHAINFILTR
+##	iptables -A OUTPUT -m conntrack --ctstate NEW -j CHAINFILTR
+##	iptables -A CHAINFILTR -m recent --set --name FILTRNOWY --mask 255.255.255.255 --rdest
+##	iptables -A CHAINFILTR -m recent ! --rcheck --seconds 60 --hitcount 2 --name FILTRNOWY --mask 255.255.255.255 --rdest -j LOG --log-prefix "[iptables] "
+
+
+##		Test: run it and check iptables.log
+##	for K in {1..240} ; do  date +%T ; nc -vz 127.0.0.1 58 ; sleep 2 ; done
+#---- Configure log ------------------------}
+
+
+while inotifywait  -q -e modify /var/log/iptables.log &>/dev/null ; do
+#	DATE_LOG=$(date +"%T")
+#	echo "$DATE_LOG  next"
+
+		ALL_CON=$(lsof -i | sed '1d')
+		##    Instead: pstree -spa
+		PS_TREE=$(pstree -pa)
+		##		Print sum of connections + app name
+		CON_1=$(awk '{print $1, 	$2, $8, $9}' <<< "$ALL_CON" | sed 's/(.*)//g' | sort)
+
+		OLD_1="$NEW_1"
+		NEW_1="$CON_1"
+
+		## For debug
+		#echo "=={"
+		#echo "$NEW_1" 
+		#echo "$CON_1"
+		#echo "==}"
+		
+		COMPARE=$(comm -13 <(echo "$OLD_1") <(echo "$NEW_1"))
+		#echo "$COMPARE"
+		#continue
+
+		if [ ! -z "$COMPARE" ] ; then
+			DATE_LOG=$(date +"%T")
+			while read LINE ; do
+				##	"TIME, {SUM OF CONNECTIONS}, NAME, PID:"
+				echo "$DATE_LOG  $LINE"
+				## 	If variable is not empty
+				if [ ! -z "$2" ] ; then
+					PROC_NAME=$(awk '{print $1}' <<< "$LINE")
+					## If variable exist in process name
+					if grep -q "$2" <<< "$PROC_NAME" ; then
+						echo " "
+						YELLOW_ECHO "  TREE ONLY ONE PROCESS FROM PSTREE:"
+						PID=$(awk '{print $2}' <<< "$LINE")
+						##   Instead: PROC.OF.PSTREE_2
+						#PROC_PSTREE_OUT=$(pstree -spa "$PID")
+						PROC_PSTREE_OUT=$(PROC.OF.PSTREE_2 "$PID")
+						YELLOW_ECHO "$PROC_PSTREE_OUT"
+						echo " "
+					## Save whole tree to log
+					#	echo "================" >> /var/log/${0}.log
+					#	echo "$DATE_LOG  $LINE" >> /var/log/${0}.log
+					#	echo "$PROC_PSTREE_OUT" >> /var/log/${0}.log
+					fi
+				fi
+			done <<< "$COMPARE"
+		fi
+done
+}
+#======================================================}
+
 case $1 in
 	"--help"|"-h")
 		echo "help :)"
@@ -149,32 +404,64 @@ case $1 in
 		echo " Usage:   $0 --option"
 		echo " "
 		echo " Options:"
-		echo "   -h  --help         		Show this help."
 		echo " "
-		echo "       --apps         		Total number of connections + name of application."
+		echo "       --apps                 Total number of connections + name of application."
 		echo " "
-		echo "       --net          		Active connections and localhost status."
+		echo "       --info PID_number      Display a tree of one process."
+		echo "                              This is the same as \" pstree -spaA \" command."
+		echo "                              It was designed for --l.ip and --l.sleep options to extract a process multiple times"
+		echo "                               from a single output of \" pstree -pa \" ."
+		echo "                              Because the life time of each process is limited."
+		echo "                              - The option may have errors."
 		echo " "
-		echo "       --loop3        		The same as option --apps but with loop."
-		echo "       						It displays the applications which created the new internet connection."
+		echo "       --net                  Active connections and localhost status."
 		echo " "
-		echo "       --loop3 app_name       It allows you to display additional information about the application,"
-		echo "                              internet connections and single lines from the process tree."
+		echo "       --l.sleep              Allows you to watch new internet connections continuously."
+		echo "                              It uses the \"sleep\" command to perform pauses in operation."
+		echo " "
+		echo "       --l.sleep app_name     You can add the application name as another parameter."
+		echo "                              This allows you to get more information about a specific internet connection."
+		echo " "
+		echo "       --l.ip                 Allows you to watch new internet connections continuously."
+		echo "                              It uses a separate iptables log file and  \"inotifywait\" command."
+		echo "                              For proper operation is required manual configuration of iptables."
+		echo " "
+		echo "       --l.ip app_name        You can add the application name as another parameter."
+		echo "                              This allows you to get more information about a specific internet connection."
+		echo " "
+		echo "   -h  --help                 Show this help."
 		echo " "
 	;;
 	"--apps")
 		LIST_APPS
 	;;
 	"--net")
-		LIST_NET ; echo "$NOWE_LINIE"
+		LIST_NET ; echo "$NEW_LINES"
 	;;
-	"--loop3")
-		LOOP_3 "$@"
+	"--l.sleep")
+		L.SLEEP "$@"
+	;;
+	"--l.ip")
+		L.IP "$@"
+	;;
+	"--info")
+		if [ -z "$2" ] ; then
+			echo "No PID number, please provide PID number" ; exit 1
+		fi 
+		PS_TREE=$(pstree -paA)
+		PROC.OF.PSTREE_2 "$2"
+		if [ -z "$PROC_PSTREE_OUT" ] ; then echo "PID "$2" not found" ; exit 1 ; fi
+		echo "$PROC_PSTREE_OUT"
 	;;
 	*)
 		echo "Unknown option: $1"
 		echo "	Try use: $0 --help"
 	;; 
 esac
+
+
+
+
+
 
 

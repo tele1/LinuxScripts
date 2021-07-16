@@ -3,7 +3,7 @@
 
 # Developed for Linux
 # License: GNU GPL v.3
-# Version 1
+# Version 2
 # Destiny: Script for use "mtr" + "whois"
 # Script usage: bash script name.freedns.com
 
@@ -32,6 +32,21 @@ BL='\e[0;36m' # Cyan ECHO
 GN='\e[0;32m' # Green ECHO
 YW='\e[0;33m' # Yellow ECHO
 RD='\e[0;31m' # Red ECHO
+
+
+case "$1" in
+    "--help"|"-h")
+		echo "---------------------------------------------------------"
+		echo " Network diagnostic tool which use mtr + whois. "
+		echo " "
+		echo " Usage:   $0 host_name"
+		echo " "
+		echo " Options:"
+		echo "   -h  --help         Show this help."
+		echo "---------------------------------------------------------"
+		exit 0
+    ;;
+esac
 
 
     echo "mtr $1"
