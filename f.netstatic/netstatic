@@ -3,7 +3,7 @@
 
 # Developed for Linux
 # License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Version 4
+# Version 5
 # Destiny: Network connection statistics 
 # Script usage: bash script --help
 
@@ -51,177 +51,14 @@ YELLOW_ECHO() {
     echo -e "${YW}${1}${NC}"
 }
 
+source lib.netstatic
 
 
-
-#======================================{
-LIST_NET() {
-LIST_LSOF=$(lsof -i :0-65535 | sed '1d' | awk '{print $1, $2, $8, $9, $10}')
-
-
-# Remove localhost from text 
-while read LINIA ; do
-	DETECT_LOCALHOST=$(awk '{print $3}' <<< "$LINIA" | awk -F ':' '{print $1}')
-	if [[ "$DETECT_LOCALHOST" == 'localhost' ]] ; then 
-		NEW_LINE=""
-	else
-		NEW_LINE="$LINIA"
-	fi
-
-	NEW_LINES=$(echo -e "${NEW_LINES}\n${NEW_LINE}")
-done <<< "$LIST_LSOF"
-
-
-# Delete blank line at the beginning 
-NEW_LINES=$(grep -v -e '^$' <<< "$NEW_LINES")
-}
-#======================================}
-
-
-LIST_APPS() {
-LIST_NET
-# List of identical processes 
-awk  '{print $1, $2}' <<< "$NEW_LINES" | uniq -c | awk  '{print $1, $2}'
+PART_COMMON_1_1() {
+echo "test"
 }
 
 
-#============================================================================{
-PROC.OF.PSTREE_2() {
-#		This is instead of command "pstree -spa"
-
-
-PID="$@"
-#echo "PID = $PID"
-
-# For Part Above of lines
-KOLUMN=0 ;
-OLD_NUMBER_CHARS=0
-# For Part Below
-BREAK=0
-
-while IFS=',' read -r A B ; do
-
-	LINE="${A} ${B}"
-	#echo "$LINE"
-
-
-	##	== Part Above of lines ==
-	if [[ "$OLD_NUMBER_CHARS" -eq "0" ]] ; then
-		OLD_NUMBER_CHARS="1" 
-		TAB_ABOVE[$KOLUMN]="$LINE"
-	elif [[ "$BREAK" == "0" ]] ; then
-	while IFS='-' read -r SOME_CHARS PROCESS_NAME ; do
-		NUMBER_CHARS="${#SOME_CHARS}"
-
-		# For Debug
-		#echo "NUMBER_CHARS = $NUMBER_CHARS"
-
-		if [[ $NUMBER_CHARS -gt $OLD_NUMBER_CHARS ]] ; then
-			KOLUMN=$[$KOLUMN + 1]
-			TAB3[$KOLUMN]=$NUMBER_CHARS  ;
-			TAB_ABOVE[$KOLUMN]="$LINE"  ;
-		elif [[ $NUMBER_CHARS -eq $OLD_NUMBER_CHARS ]] ; then
-			KOLUMN=$KOLUMN
-			TAB3[$KOLUMN]=$NUMBER_CHARS
-			TAB_ABOVE[$KOLUMN]="$LINE"  ;
-		elif [[ $NUMBER_CHARS -lt $OLD_NUMBER_CHARS ]] ; then
-
-			COUNT_LOCAL=1
-			for L in "${TAB3[@]}"; do
-				if   [[ "$L" -eq "$NUMBER_CHARS" ]] ; then
-					break
-				elif [[ "$L" -gt "$NUMBER_CHARS" ]] ; then
-					break
-				fi
-				COUNT_LOCAL=$[$COUNT_LOCAL + 1]
-			done
-
-			KOLUMN=$COUNT_LOCAL
-			TAB3[$KOLUMN]=$NUMBER_CHARS
-			TAB_ABOVE[$KOLUMN]="$LINE"  ;
-
-			# Remove older from TAB
-			for M in  $( seq $[$COUNT_LOCAL + 1] ${#TAB3[@]} ) ; do
-
-				# For Debug
-				#echo "M= $M"
-				#echo "AA= $[$COUNT_LOCAL + 1] ; $[${#TAB3[@]} - 1] ; ${#TAB3[@]}"
-				#echo "${TAB3[@]}"
-
-				unset TAB3[$M]
-				unset TAB_ABOVE[$M]
-			done
-
-		fi
-		
-		# For Debug
-		#echo "KOLUMN = $KOLUMN"
-		#echo "TAB3 = ${TAB3[@]}"
-		#echo "$LINE"
-
-		OLD_NUMBER_CHARS=$NUMBER_CHARS
-	done <<< "$A"
-	fi
-
-
-	##	== Part Center of lines ==
-	while IFS=' ' read -r PID_LINE OPTIONS ; do
-		#echo "PID_LINE = $PID_LINE"
-		if [[ "$PID_LINE" -eq "$PID" ]] ; then
-
-			# For Debug
-			#echo "SUUUUCCESS $PID"
-			#echo "$LINE"
-
-			PART_CENTER="$LINE"
-
-			BREAK=1
-			IFS="-"; set $A; CHARS="$1" ; SAVE_NUMBER_CHARS=${#CHARS}
-			COUNT_PART_BELOW=0
-			break
-		fi
-	done <<< "$B"
-
-	# Trick
-	if [[ "$BREAK" == "1" ]] ; then
-		BREAK=2
-		continue
-	fi
-
-	##	== Part Below of lines ==
-	if [[ "$BREAK" == "2" ]] ; then
-
-		IFS="-"; set $A; CHARS="$1" ; NUMBER_CHARS=${#CHARS}
-
-		# For Debug
-		#echo " SAVE ; NEW = $SAVE_NUMBER_CHARS ; $NUMBER_CHARS"
-		#echo "$LINE"
-		
-		if [[ "$NUMBER_CHARS" -le "$SAVE_NUMBER_CHARS" ]] ;then
-			break
-		fi
-
-		PART_BELOW[$COUNT_PART_BELOW]="$LINE"
-		COUNT_PART_BELOW=$[$COUNT_PART_BELOW + 1]
-	fi
-
-	#echo "spam wwww"
-done <<< "$PS_TREE"
-#
-#echo "=========={"
-#printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}"
-#echo "==========--"
-#printf "%s\n" "${PART_CENTER}"
-#echo "==========--"
-#printf "%s\n" "${PART_BELOW[@]}"
-#echo "==========}"
-
-if [ ! -z "${PART_CENTER}" ] ; then
-	PROC_PSTREE_OUT=$(printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}" "${PART_CENTER}" "${PART_BELOW[@]}")
-	#echo "$PROC_PSTREE_OUT"
-fi
-}
-#============================================================================}
 
 
 #======================================================{
@@ -232,7 +69,7 @@ L.SLEEP() {
 	while true ; do
 		#		" lsof -i -P " alternative (However instead lsof you can try also use " netstat , ss " what you want)
 		ALL_CON=$(lsof -i :0-65535 | sed '1d')
-		PS_TREE=$(pstree -pa)
+		PS_TREE=$(pstree -paA)
 		##		Print sum of connections + app name
 		CON_1=$(awk '{print $1, $2}' <<< "$ALL_CON" | sort | uniq -c | sort)
 
@@ -304,49 +141,15 @@ if [ ! -f '/var/log/iptables.log' ]; then
 	exit 0
 fi
 
+while : ; do
+	while inotifywait  -q -e modify,delete_self,move_self /var/log/iptables.log &>/dev/null ; do
 
-#---- Configure log ------------------------{
-##		Create file /etc/rsyslog.d/10-iptables.conf
-##		 ( Number 10 from "10-iptables.conf" is to load faster than 50-default.conf
-##	:msg,contains,"[IPTables] " /var/log/iptables.log
-
-
-##		Create file /etc/logrotate.d/iptables
-##	/var/log/iptables.log
-##	{
-##		rotate 2
-##		daily
-##		missingok
-##		notifempty
-##		delaycompress
-##		compress
-##		postrotate
-##			invoke-rc.d rsyslog rotate > /dev/null
-##		endscript
-##	}
-
-
-##		Run command
-##	service rsyslog restart
-
-
-##		Set Firewall iptables, for example:
-##	iptables -N CHAINFILTR
-##	iptables -A OUTPUT -m conntrack --ctstate NEW -j CHAINFILTR
-##	iptables -A CHAINFILTR -m recent --set --name FILTRNOWY --mask 255.255.255.255 --rdest
-##	iptables -A CHAINFILTR -m recent ! --rcheck --seconds 60 --hitcount 2 --name FILTRNOWY --mask 255.255.255.255 --rdest -j LOG --log-prefix "[iptables] "
-
-
-##		Test: run it and check iptables.log
-##	for K in {1..240} ; do  date +%T ; nc -vz 127.0.0.1 58 ; sleep 2 ; done
-#---- Configure log ------------------------}
-
-
-while inotifywait  -q -e modify /var/log/iptables.log &>/dev/null ; do
+echo next
 #	DATE_LOG=$(date +"%T")
 #	echo "$DATE_LOG  next"
 
-		ALL_CON=$(lsof -i | sed '1d')
+		#ALL_CON=$(lsof -i | sed '1d')
+		ALL_CON=$(lsof -i )
 		##    Instead: pstree -spa
 		PS_TREE=$(pstree -pa)
 		##		Print sum of connections + app name
@@ -369,7 +172,9 @@ while inotifywait  -q -e modify /var/log/iptables.log &>/dev/null ; do
 			DATE_LOG=$(date +"%T")
 			while read LINE ; do
 				##	"TIME, {SUM OF CONNECTIONS}, NAME, PID:"
-				echo "$DATE_LOG  $LINE"
+				echo "$DATE_LOG  $LINE" | tee -a /var/log/netstatic3.log
+					## Save to log
+
 				## 	If variable is not empty
 				if [ ! -z "$2" ] ; then
 					PROC_NAME=$(awk '{print $1}' <<< "$LINE")
@@ -383,14 +188,13 @@ while inotifywait  -q -e modify /var/log/iptables.log &>/dev/null ; do
 						PROC_PSTREE_OUT=$(PROC.OF.PSTREE_2 "$PID")
 						YELLOW_ECHO "$PROC_PSTREE_OUT"
 						echo " "
-					## Save whole tree to log
-					#	echo "================" >> /var/log/${0}.log
-					#	echo "$DATE_LOG  $LINE" >> /var/log/${0}.log
-					#	echo "$PROC_PSTREE_OUT" >> /var/log/${0}.log
+
 					fi
 				fi
 			done <<< "$COMPARE"
 		fi
+	done
+	echo "RESET $?"
 done
 }
 #======================================================}
@@ -460,6 +264,41 @@ case $1 in
 esac
 
 
+#---- Configure log ------------------------{
+##		Create file /etc/rsyslog.d/10-iptables.conf
+##		 ( Number 10 from "10-iptables.conf" is to load faster than 50-default.conf
+##	:msg,contains,"[IPTables] " /var/log/iptables.log
+
+
+##		Create file /etc/logrotate.d/iptables
+##	/var/log/iptables.log
+##	{
+##		rotate 2
+##		daily
+##		missingok
+##		notifempty
+##		delaycompress
+##		compress
+##		postrotate
+##			invoke-rc.d rsyslog rotate > /dev/null
+##		endscript
+##	}
+
+
+##		Run command
+##	service rsyslog restart
+
+
+##		Set Firewall iptables, for example:
+##	iptables -N CHAINFILTR
+##	iptables -A OUTPUT -m conntrack --ctstate NEW -j CHAINFILTR
+##	iptables -A CHAINFILTR -m recent --set --name FILTRNOWY --mask 255.255.255.255 --rdest
+##	iptables -A CHAINFILTR -m recent ! --rcheck --seconds 60 --hitcount 2 --name FILTRNOWY --mask 255.255.255.255 --rdest -j LOG --log-prefix "[iptables] "
+
+
+##		Test: run it and check iptables.log
+##	for K in {1..240} ; do  date +%T ; nc -vz 127.0.0.1 58 ; sleep 2 ; done
+#---- Configure log ------------------------}
 
 
 

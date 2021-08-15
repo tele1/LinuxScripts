@@ -5,7 +5,7 @@
 # For own use.
 
 # License:		GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Version		1
+# Version		2
 # Destiny:		Script to check whether unnecessary packages are installed.
 #               The package list is created to my needs. 
 #			    I am not responsible for other people's needs.
@@ -185,7 +185,10 @@ libproxy1-plugin-networkmanager
 network-manager-pptp
 network-manager-pptp-gnome
 xul-ext-lightning
-iio-sensor-proxy'
+iio-sensor-proxy
+sticky
+hplip-data
+printer-driver-postscript-hp'
 
 
 ###########################}

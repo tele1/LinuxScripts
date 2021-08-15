@@ -1,0 +1,174 @@
+#!/bin/bash
+
+
+
+#============================================================================{
+PROC.OF.PSTREE_2() {
+#		This is instead of command "pstree -spa"
+
+
+PID="$@"
+#echo "PID = $PID"
+
+# For Part Above of lines
+KOLUMN=0 ;
+OLD_NUMBER_CHARS=0
+# For Part Below
+BREAK=0
+
+while IFS=',' read -r A B ; do
+
+	LINE="${A} ${B}"
+	#echo "$LINE"
+
+
+	##	== Part Above of lines ==
+	if [[ "$OLD_NUMBER_CHARS" -eq "0" ]] ; then
+		OLD_NUMBER_CHARS="1" 
+		TAB_ABOVE[$KOLUMN]="$LINE"
+	elif [[ "$BREAK" == "0" ]] ; then
+	while IFS='-' read -r SOME_CHARS PROCESS_NAME ; do
+		NUMBER_CHARS="${#SOME_CHARS}"
+
+		# For Debug
+		#echo "NUMBER_CHARS = $NUMBER_CHARS"
+
+		if [[ $NUMBER_CHARS -gt $OLD_NUMBER_CHARS ]] ; then
+			KOLUMN=$[$KOLUMN + 1]
+			TAB3[$KOLUMN]=$NUMBER_CHARS  ;
+			TAB_ABOVE[$KOLUMN]="$LINE"  ;
+		elif [[ $NUMBER_CHARS -eq $OLD_NUMBER_CHARS ]] ; then
+			KOLUMN=$KOLUMN
+			TAB3[$KOLUMN]=$NUMBER_CHARS
+			TAB_ABOVE[$KOLUMN]="$LINE"  ;
+		elif [[ $NUMBER_CHARS -lt $OLD_NUMBER_CHARS ]] ; then
+
+			COUNT_LOCAL=1
+			for L in "${TAB3[@]}"; do
+				if   [[ "$L" -eq "$NUMBER_CHARS" ]] ; then
+					break
+				elif [[ "$L" -gt "$NUMBER_CHARS" ]] ; then
+					break
+				fi
+				COUNT_LOCAL=$[$COUNT_LOCAL + 1]
+			done
+
+			KOLUMN=$COUNT_LOCAL
+			TAB3[$KOLUMN]=$NUMBER_CHARS
+			TAB_ABOVE[$KOLUMN]="$LINE"  ;
+
+			# Remove older from TAB
+			for M in  $( seq $[$COUNT_LOCAL + 1] ${#TAB3[@]} ) ; do
+
+				# For Debug
+				#echo "M= $M"
+				#echo "AA= $[$COUNT_LOCAL + 1] ; $[${#TAB3[@]} - 1] ; ${#TAB3[@]}"
+				#echo "${TAB3[@]}"
+
+				unset TAB3[$M]
+				unset TAB_ABOVE[$M]
+			done
+
+		fi
+		
+		# For Debug
+		#echo "KOLUMN = $KOLUMN"
+		#echo "TAB3 = ${TAB3[@]}"
+		#echo "$LINE"
+
+		OLD_NUMBER_CHARS=$NUMBER_CHARS
+	done <<< "$A"
+	fi
+
+
+	##	== Part Center of lines ==
+	while IFS=' ' read -r PID_LINE OPTIONS ; do
+		#echo "PID_LINE = $PID_LINE"
+		if [[ "$PID_LINE" -eq "$PID" ]] ; then
+
+			# For Debug
+			#echo "SUUUUCCESS $PID"
+			#echo "$LINE"
+
+			PART_CENTER="$LINE"
+
+			BREAK=1
+			IFS="-"; set $A; CHARS="$1" ; SAVE_NUMBER_CHARS=${#CHARS}
+			COUNT_PART_BELOW=0
+			break
+		fi
+	done <<< "$B"
+
+	# Trick
+	if [[ "$BREAK" == "1" ]] ; then
+		BREAK=2
+		continue
+	fi
+
+	##	== Part Below of lines ==
+	if [[ "$BREAK" == "2" ]] ; then
+
+		IFS="-"; set $A; CHARS="$1" ; NUMBER_CHARS=${#CHARS}
+
+		# For Debug
+		#echo " SAVE ; NEW = $SAVE_NUMBER_CHARS ; $NUMBER_CHARS"
+		#echo "$LINE"
+		
+		if [[ "$NUMBER_CHARS" -le "$SAVE_NUMBER_CHARS" ]] ;then
+			break
+		fi
+
+		PART_BELOW[$COUNT_PART_BELOW]="$LINE"
+		COUNT_PART_BELOW=$[$COUNT_PART_BELOW + 1]
+	fi
+
+	#echo "spam wwww"
+done <<< "$PS_TREE"
+#
+#echo "=========={"
+#printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}"
+#echo "==========--"
+#printf "%s\n" "${PART_CENTER}"
+#echo "==========--"
+#printf "%s\n" "${PART_BELOW[@]}"
+#echo "==========}"
+
+if [ ! -z "${PART_CENTER}" ] ; then
+	PROC_PSTREE_OUT=$(printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}" "${PART_CENTER}" "${PART_BELOW[@]}")
+	#echo "$PROC_PSTREE_OUT"
+fi
+}
+#============================================================================}
+
+#======================================{
+LIST_NET() {
+LIST_LSOF=$(lsof -i :0-65535 | sed '1d' | awk '{print $1, $2, $8, $9, $10}')
+
+
+# Remove localhost from text 
+while read LINIA ; do
+	DETECT_LOCALHOST=$(awk '{print $3}' <<< "$LINIA" | awk -F ':' '{print $1}')
+	if [[ "$DETECT_LOCALHOST" == 'localhost' ]] ; then 
+		NEW_LINE=""
+	else
+		NEW_LINE="$LINIA"
+	fi
+
+	NEW_LINES=$(echo -e "${NEW_LINES}\n${NEW_LINE}")
+done <<< "$LIST_LSOF"
+
+
+# Delete blank line at the beginning 
+NEW_LINES=$(grep -v -e '^$' <<< "$NEW_LINES")
+}
+#======================================}
+
+
+#======================={
+LIST_APPS() {
+LIST_NET
+# List of identical processes 
+awk  '{print $1, $2}' <<< "$NEW_LINES" | uniq -c | awk  '{print $1, $2}'
+}
+#=======================}
+
