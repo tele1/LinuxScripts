@@ -8,7 +8,11 @@
 ## Script usage:
 ##		1. Paste .pdf files to PDF folder
 ##		2. Run in terminal:		bash script_name
-##		3. Wait a minute and it's ready. You will have TEXT and MP3 folders with files.
+##		3. Edit script
+##			- If you use espeak-ng instead espeak, so change " espeak " to " espeak-ng " in side this script_name.
+##			- List all available voice languages for espeak
+##			  Change language in side script. I used polish language " -v polish "
+##		4. Wait a minute and it's ready. You will have TEXT and MP3 folders with files.
 
 
 ###########################}
@@ -45,7 +49,7 @@ echo "	"
 
 while IFS=" " read -r FILE2 ; do
 	echo $FILE2
-	espeak-ng  -v polish --stdout -f TEXT/${FILE2}.txt | ffmpeg -i - -ar 44100 -ac 2 -ab 192k -f mp3 MP3/${FILE2}.mp3
+	espeak  -v polish --stdout -f TEXT/${FILE2}.txt | ffmpeg -i - -ar 44100 -ac 2 -ab 192k -f mp3 MP3/${FILE2}.mp3
 done <<< $LISTA_1
 
 echo "THE END"
