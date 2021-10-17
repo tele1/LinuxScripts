@@ -1,0 +1,96 @@
+#!/bin/bash
+
+
+## Developed for Linux
+## License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+	VERSION='1'
+## Destiny: Enable / Disable Firejail
+## Script usage: bash script_name
+
+
+
+
+# 	TUTORIALS:	
+# https://forums.linuxmint.com/viewtopic.php?f=42&t=240157
+# https://sourceforge.net/p/yad-dialog/wiki/Examples/
+# http://smokey01.com/yad/
+# How Find Example GTK Icons:
+# reset ; locate icons | grep -E 'actions.*gtk'
+
+
+###########################}
+# Check Dependecies - List created automatically by find.bash.dep.sh version=8 
+# source=https://github.com/tele1/LinuxScripts
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P firecfg) ]] && DEP="$DEP"$'\n'"firecfg"
+[[ -z $(type -P ls) ]] && DEP="$DEP"$'\n'"ls"
+[[ -z $(type -P pkexec) ]] && DEP="$DEP"$'\n'"pkexec"
+[[ -z $(type -P true) ]] && DEP="$DEP"$'\n'"true"
+[[ -z $(type -P yad) ]] && DEP="$DEP"$'\n'"yad"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+###########################}
+
+
+WINDOW_INFO() {
+	yad --image=info --title "Info" --text="$1" 
+}
+
+GET_STATUS() {
+	STATUS=$(ls -l /usr/local/bin/ | grep -q firejail ; echo "$?")
+}
+
+
+while true; do
+	GET_STATUS
+	if [[ 0 -eq "$STATUS" ]] ; then
+		TEXT_1="	Firejail is now Enabled"
+	else
+		TEXT_1="	Firejail is now Disabled"
+	fi
+
+	STATE=$(yad --width=450 --height=250 --title "Firejail Sanbox" --list  --text "Menu" --radiolist  \
+	--column "Choose" \
+	--column "Option"  False "Disable Firejail"  False "Enable Firejail" False "Check Status" \
+	--text="	\n	$TEXT_1	\n	" \
+	--button=gtk-quit:1 --button=gtk-ok:0 )
+
+	CODE="$?"	
+	if [[ "$CODE" -eq 1 ]] ; then 
+		echo "We go out with code 1." ; exit 0
+	elif [[ "$CODE" -eq 252 ]] ; then 
+		echo "We go out with code 252." ; exit 0
+	else
+		echo "CODE = $CODE"
+	fi
+
+	while IFS="|" read -r THE_REST STATE ; do 
+		echo $STATE ; 
+		case "$STATE" in
+			"Disable Firejail")
+				echo 1
+				pkexec firecfg --clean
+			;;
+			"Enable Firejail")
+				echo 2
+				pkexec firecfg
+			;;
+			"Check Status")
+				echo 3
+				GET_STATUS
+				if [[ 0 -eq "$STATUS" ]] ; then
+					echo "STATUS = $STATUS"
+					echo "Firejail is Enabled"
+					WINDOW_INFO "Firejail is Enabled"
+				else
+					echo "STATUS = $STATUS"
+					echo "Firejail is Disabled"
+					WINDOW_INFO "Firejail is Disabled"
+				fi
+			;;
+		esac
+	done <<< $STATE
+done
+
+

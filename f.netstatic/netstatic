@@ -200,6 +200,24 @@ done
 #======================================================}
 
 case $1 in
+	"--net")
+		LIST_NET ; echo "$NEW_LINES"
+	;;
+	"--apps")
+		LIST_APPS
+	;;
+	"--tree")
+		if [ -z "$2" ] ; then
+			echo "No PID number, please provide PID number" ; exit 1
+		fi 
+		PS_TREE=$(pstree -paA)
+		PROC.OF.PSTREE_2 "$2"
+		if [ -z "$PROC_PSTREE_OUT" ] ; then echo "PID "$2" not found" ; exit 1 ; fi
+		echo "$PROC_PSTREE_OUT"
+	;;
+	"--trees")
+		pstree -pa
+	;;
 	"--help"|"-h")
 		echo "help :)"
 		echo "---------------------------------------------------------"
@@ -209,54 +227,46 @@ case $1 in
 		echo " "
 		echo " Options:"
 		echo " "
-		echo "       --apps                 Total number of connections + name of application."
+		echo "       --apps                 Total running now number of connections + name of application."
 		echo " "
-		echo "       --info PID_number      Display a tree of one process."
+		echo "       --tree PID_number      Display a tree of one process."
 		echo "                              This is the same as \" pstree -spaA \" command."
 		echo "                              It was designed for --l.ip and --l.sleep options to extract a process multiple times"
 		echo "                               from a single output of \" pstree -pa \" ."
 		echo "                              Because the life time of each process is limited."
 		echo "                              - The option may have errors."
 		echo " "
+		echo "       --trees                Display the entire process tree. ( It's the same as: pstree -pa )"
+		echo " "
 		echo "       --net                  Active connections and localhost status."
-		echo " "
-		echo "       --l.sleep              Allows you to watch new internet connections continuously."
-		echo "                              It uses the \"sleep\" command to perform pauses in operation."
-		echo " "
-		echo "       --l.sleep app_name     You can add the application name as another parameter."
-		echo "                              This allows you to get more information about a specific internet connection."
-		echo " "
-		echo "       --l.ip                 Allows you to watch new internet connections continuously."
-		echo "                              It uses a separate iptables log file and  \"inotifywait\" command."
-		echo "                              For proper operation is required manual configuration of iptables."
-		echo " "
-		echo "       --l.ip app_name        You can add the application name as another parameter."
-		echo "                              This allows you to get more information about a specific internet connection."
 		echo " "
 		echo "   -h  --help                 Show this help."
 		echo " "
+		echo " "
+		echo "  Options for monitoring system: "
+		echo " "
+		echo "       --sleep              Allows you to watch new internet connections continuously."
+		echo "                              It uses the \"sleep\" command to perform pauses in operation."
+		echo " "
+		echo "       --sleep app_name     You can add the application name as another parameter."
+		echo "                              This allows you to get more information about a specific internet connection."
+		echo " "
+		echo "       --ip                 Allows you to watch new internet connections continuously."
+		echo "                              It uses a separate iptables log file and  \"inotifywait\" command."
+		echo "                              For proper operation is required manual configuration of iptables."
+		echo " "
+		echo "       --ip app_name        You can add the application name as another parameter."
+		echo "                              This allows you to get more information about a specific internet connection."
+
+		echo " "
 	;;
-	"--apps")
-		LIST_APPS
-	;;
-	"--net")
-		LIST_NET ; echo "$NEW_LINES"
-	;;
-	"--l.sleep")
+	"--sleep")
 		L.SLEEP "$@"
 	;;
-	"--l.ip")
+	"--ip")
 		L.IP "$@"
 	;;
-	"--info")
-		if [ -z "$2" ] ; then
-			echo "No PID number, please provide PID number" ; exit 1
-		fi 
-		PS_TREE=$(pstree -paA)
-		PROC.OF.PSTREE_2 "$2"
-		if [ -z "$PROC_PSTREE_OUT" ] ; then echo "PID "$2" not found" ; exit 1 ; fi
-		echo "$PROC_PSTREE_OUT"
-	;;
+
 	*)
 		echo "Unknown option: $1"
 		echo "	Try use: $0 --help"
