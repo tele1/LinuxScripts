@@ -1,0 +1,92 @@
+#!/bin/bash
+
+
+
+
+
+
+
+
+
+
+LEVEL11() {
+	echo "12 ; $@"
+
+
+while (($#)) ; do
+	echo "petla = $# "
+	case "$1" in
+	--shorten) m1=1 ; shift  ;;
+	#---------------------------{
+		case "$1" in
+		to-name) sposob=1 ;;
+		to-count) sposob=2 ;;
+		*)  echo "m = $1" ; echo "blad 4" ; exit ;;
+		esac
+	#---------------------------}
+	--sleep) m2=2 ;;
+	--catch)  m3=3  ; shift ; 
+		#	LEVEL22 "$1" "$2" ; shift ;;
+	#---------------------------{
+		[[ -z "$1" ]] && { echo "Error: First argument is empty" ; exit 1 ;}
+		[[ -z "$2" ]] && { echo "Error: Second argument is empty" ; exit 1 ;}
+
+		echo "$1 $2 ; nice"
+
+		case "$1" in
+		pid) catch=pid ; name=$2 ;;
+		name) catch=name ; name=$2 ;;
+		first-pid) catch=first-pid  ; name=$2 ;;
+		first-name) catch=first-name ; name=$2 ;;
+		*)  echo "m = $1" ; echo "blad 4" ; exit ;;
+		esac
+		shift
+	#---------------------------}
+		shift
+	;;
+	--log)   m4=4 ;;
+	*)  echo "m = $1" ; echo "blad 2" ; exit ;;
+	esac
+	shift
+done
+
+[[ $m1 == 1 ]] && { [[ -z "$sposob" ]] && echo "Blad 3" ; exit 1 ;}
+
+
+echo "A = $@"
+echo "m1 = $m1 ; $sposob ; m2 = $m2 ; m3= $m3 ;$catch $name ; $m4"
+}
+
+	case "$1" in
+	--lsof)    echo "--lsof" ;    shift ; LEVEL11 "$@" ;;
+	--netstat) echo "--netstat" ; shift ; LEVEL11 "$@" ;;
+	--ss)       echo "--ss" ;     shift ; LEVEL11 "$@" ;;
+	--display-log) echo "-display-log"  ; shift ; 
+	#---------------------------{
+		case "$1" in
+			--last-hour) l1=1 ;;
+			--last-day)  l2=2 ;;
+			--all)       l3=3 ;;
+			*)  echo "m = $1" ; echo "blad --display-log" ; exit ;;
+		esac
+
+		echo "l ; $l1 ; $l2 ; $l3"
+		exit 0
+	#---------------------------}
+	;;
+	--filter-log) echo "--filter-log"  ; shift ; 
+	#---------------------------{
+		case "$1" in
+			--most-of-all) l1=1 ;;
+			--least-of-all)  l2=2 ;;
+			*)  echo "m = $1" ; echo "blad --filter-log" ; exit ;;
+		esac
+
+		echo "l ; $l1 ; $l2"
+	#---------------------------}
+		exit 0
+	;;
+	*) echo $1 ; echo "Blad 1" ;;
+	esac
+
+

@@ -1,0 +1,207 @@
+#!/bin/bash
+
+
+# Developed for Linux
+# License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+# Version 5
+# Destiny: Network connection statistics 
+# Script usage: bash script --help
+
+
+##	LINKS:
+##	https://askubuntu.com/questions/993253/is-networkmanager-sending-http-requests-to-googleusercontent-com
+##	http://karunsubramanian.com/network/what-is-syn_sent-socket-status/
+
+
+# Check root running
+[[ $EUID -ne 0 ]] && echo -e "'\e[0;31m' This script must be run as root. '\e[0m'" && exit 1
+
+
+#  netmonit dependecies
+source lib.netmonit.dep
+source lib.colors
+source lib.pstree
+source lib.comm
+
+
+
+
+#======================================================{
+L.SLEEP2() {
+	GREEN_ECHO "	Loop Options: $2 $3"
+	
+	if [[ "$2" == "lsof" ]] ; then
+		COMM="COMM.LSOF"
+	elif [[ "$2" == "netstat" ]] ; then
+		COMM="COMM.NETSTAT"
+	elif [[ "$2" == "ss" ]] ; then
+		COMM="COMM.SS"
+	else 
+		echo "Error: Wrong option $2" ; exit 1
+	fi
+
+	while true ; do
+		date +"%Y-%m-%d %T"
+		${COMM} "$3"
+		sleep 1
+	done
+}
+#======================================================}
+
+#======================================================{
+L.SLEEP() {
+	echo "Additional loop options: $2"
+	echo " "
+	GREEN_ECHO "TIME, {SUM OF CONNECTIONS}, NAME, PID:"
+	while true ; do
+		#		" lsof -i -P " alternative (However instead lsof you can try also use " netstat , ss " what you want)
+		ALL_CON=$(lsof -i :0-65535 | sed '1d')
+		PS_TREE=$(pstree -paA)
+		##		Print sum of connections + app name
+		CON_1=$(awk '{print $1, $2}' <<< "$ALL_CON" | sort | uniq -c | sort)
+
+		OLD_1="$NEW_1"
+		NEW_1="$CON_1"
+
+		## For debug
+		#echo "=={"
+		#echo "$NEW_1" 
+		#echo "$CON_1"
+		#echo "==}"
+		COMPARE=$(comm -13 <(echo "$OLD_1") <(echo "$NEW_1"))
+		if [ ! -z "$COMPARE" ] ; then
+			DATE_LOG=$(date +"%T")
+			while read LINE ; do
+				##	"TIME, {SUM OF CONNECTIONS}, NAME, PID:"
+				echo "$DATE_LOG  $LINE"
+				## 	If variable is not empty
+				if [ ! -z "$2" ] ; then
+					## If variable exist in line
+					if grep -q "$2" <<< "$LINE" ; then
+						##	Print info about connections this app
+						CONNECTIONS=$(grep "$2" <<< "$ALL_CON")
+						YELLOW_ECHO "  CONNECTIONS:"
+						YELLOW_ECHO "$CONNECTIONS"
+					##	Print tree
+					##  Curiosity: One tree with PID is better --> " pstree -ptsN pid PID_of_app "
+					##	But I wrote the command "pstree" above because the script may be too slow and "pstree" may not catch the process.
+					##	You can also save the entire output of the "pstree" command to a file / log
+					##  and then inside log you can search PID of the application which you are interested.
+						echo " "
+						PID=$(awk '{print $3}' <<< "$LINE")
+						YELLOW_ECHO "PID = $PID"
+						echo " "
+						YELLOW_ECHO "  TREE ONLY ONE PROCESS FROM PSTREE:"
+						PROC.OF.PSTREE_2 "$PID"
+						if [ -z "$PROC_PSTREE_OUT" ] ; then 
+							echo "  PID not found "$PID""
+						else
+							YELLOW_ECHO "$PROC_PSTREE_OUT"
+						fi
+						echo " "
+					## Save whole tree to log
+					#	echo "================" >> /var/log/${0}.log
+					#	echo "$DATE_LOG  $LINE" >> /var/log/${0}.log
+					#	echo "$PROC_PSTREE_OUT" >> /var/log/${0}.log
+					fi
+				fi
+			done <<< "$COMPARE"
+		fi
+		sleep 2
+	done
+}
+#======================================================}
+
+
+
+case $1 in
+	"--net")
+		LIST_NET ; echo "$NEW_LINES"
+	;;
+	"--apps")
+		LIST_APPS
+	;;
+	"--tree")
+		if [ -z "$2" ] ; then
+			echo "No PID number, please provide PID number" ; exit 1
+		fi 
+		PS_TREE=$(pstree -paA)
+		PROC.OF.PSTREE_2 "$2"
+		if [ -z "$PROC_PSTREE_OUT" ] ; then echo "PID "$2" not found" ; exit 1 ; fi
+		echo "$PROC_PSTREE_OUT"
+	;;
+	"--trees")
+		pstree -pa
+	;;
+	"--help"|"-h")
+		echo "help :)"
+		echo "---------------------------------------------------------"
+		echo " Script shows internet connections. ( only external calls ) "
+		echo " "
+		echo " Usage:   $0 --option"
+		echo " "
+		echo " Options:"
+		echo " "
+		echo "       --apps                 Total running now number of connections + name of application."
+		echo " "
+		echo "       --tree PID_number      Display a tree of one process."
+		echo "                              This is the same as \" pstree -spaA \" command."
+		echo "                              It was designed for --l.ip and --l.sleep options to extract a process multiple times"
+		echo "                               from a single output of \" pstree -pa \" ."
+		echo "                              Because the life time of each process is limited."
+		echo "                              - The option may have errors."
+		echo " "
+		echo "       --trees                Display the entire process tree. ( It's the same as: pstree -pa )"
+		echo " "
+		echo "       --net                  Active connections and localhost status."
+		echo " "
+		echo "   -h  --help                 Show this help."
+		echo " "
+		echo " "
+		echo "  Options for monitoring system: "
+		echo " "
+		echo "       --sleep              Allows you to watch new internet connections continuously."
+		echo "                              It uses the \"sleep\" command to perform pauses in operation."
+		echo " "
+		echo "       --sleep app_name     You can add the application name as another parameter."
+		echo "                              This allows you to get more information about a specific internet connection."
+		echo " "
+		echo "       --ip                 Allows you to watch new internet connections continuously."
+		echo "                              It uses a separate iptables log file and  \"inotifywait\" command."
+		echo "                              For proper operation is required manual configuration of iptables."
+		echo " "
+		echo "       --ip app_name        You can add the application name as another parameter."
+		echo "                              This allows you to get more information about a specific internet connection."
+		echo " "
+		echo " Debug Options:"
+		echo " "
+		echo "       --lsof "
+		echo "       --netstat "
+		echo "       --ss "
+
+	;;
+	"--sleep")
+		L.SLEEP2 "$@"
+	;;
+	"--ip")
+		L.IP "$@"
+	;;
+#====================
+	"--lsof")
+		COMM.LSOF "$@"
+	;;
+	"--netstat")
+		COMM.NETSTAT "$@"
+	;;
+	"--ss")
+		COMM.SS "$2"
+	;;
+#====================
+	*)
+		echo "Unknown option: $1"
+		echo "	Try use: $0 --help"
+	;; 
+esac
+
+
+

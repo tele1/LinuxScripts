@@ -1,0 +1,24 @@
+#!/bin/bash
+
+
+
+
+
+###########################}
+# Check Dependecies - List created automatically by find.bash.dep.sh version=8 
+# source=https://github.com/tele1/LinuxScripts
+[[ -z $(type -P awk) ]] && DEP="$DEP"$'\n'"awk"
+[[ -z $(type -P comm) ]] && DEP="$DEP"$'\n'"comm"
+[[ -z $(type -P date) ]] && DEP="$DEP"$'\n'"date"
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P grep) ]] && DEP="$DEP"$'\n'"grep"
+[[ -z $(type -P lsof) ]] && DEP="$DEP"$'\n'"lsof"
+[[ -z $(type -P pstree) ]] && DEP="$DEP"$'\n'"pstree"
+[[ -z $(type -P sleep) ]] && DEP="$DEP"$'\n'"sleep"
+[[ -z $(type -P sort) ]] && DEP="$DEP"$'\n'"sort"
+[[ -z $(type -P true) ]] && DEP="$DEP"$'\n'"true"
+[[ -z $(type -P uniq) ]] && DEP="$DEP"$'\n'"uniq"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+###########################}
