@@ -1,0 +1,172 @@
+#!/bin/bash
+
+
+# Developed for Linux
+# License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+# Version 5
+# Destiny: Network connection statistics 
+# Script usage: bash script --help
+
+
+##	LINKS:
+##	https://askubuntu.com/questions/993253/is-networkmanager-sending-http-requests-to-googleusercontent-com
+##	http://karunsubramanian.com/network/what-is-syn_sent-socket-status/
+
+
+# Check root running
+[[ $EUID -ne 0 ]] && echo -e "'\e[0;31m' This script must be run as root. '\e[0m'" && exit 1
+
+
+#  netmonit dependecies
+source lib/lib.netmonit.dep
+source lib/lib.colors
+source lib/lib.pstree
+source lib/lib.comm
+source lib/lib.netmonit.help
+
+
+
+
+L.SLEEP4() {
+echo "mm3 = $m3"
+
+	while true ; do
+		date +"%Y-%m-%d %T"
+			${COMM}
+		sleep 1
+	done
+}
+
+
+#======================================================{
+LEVEL11() {
+echo "12 ; $@"
+
+
+while (($#)) ; do
+	echo "petla = $# "
+	case "$1" in
+	--shorten) m1=1 ; shift  
+	#---------------------------{
+		case "$1" in
+		to-name) sposob=1 ;;
+		to-count) sposob=2 ;;
+		*)  echo "m = $1" ; echo "blad 4" ; exit ;;
+		esac
+	#---------------------------}
+	;;
+	--sleep)  m2=2 ;;
+	--catch)  m3=3  ; shift ; 
+
+	#---------------------------{
+		[[ -z "$1" ]] && { echo "Error: First argument is empty" ; exit 1 ;}
+		[[ -z "$2" ]] && { echo "Error: Second argument is empty" ; exit 1 ;}
+
+		echo "$1 $2 ; nice"
+
+		case "$1" in
+		pid) catch=pid ; name=$2 ;;
+		name) catch=name ; name=$2 ;;
+		first-pid) catch=first-pid  ; name=$2 ;;
+		first-name) catch=first-name ; name=$2 ;;
+		*)  echo "m = $1" ; echo "blad 4" ; exit ;;
+		esac
+		shift
+	#---------------------------}
+		shift
+	;;
+	--log)   m4=4 ;;
+	*)  echo "m = $1" ; echo "blad 2" ; exit ;;
+	esac
+	shift
+done
+
+[[ $m1 == 1 ]] && { [[ -z "$sposob" ]] && { echo "Blad 3" ; exit 1 ;} ;}
+
+
+echo "A = $@"
+# shorten ; sposob       ; sleep    ; catch name            ; log
+echo "m1 = $m1 ; $sposob ; m2 = $m2 ; m3= $m3 ;$catch $name ;m4 = $m4"
+echo =====================================
+
+
+
+
+if [[ "$m1" == 1 ]] ; then 
+	if [[ $sposob == 1 ]] ; then 
+		echo 1
+	elif [[ $sposob == 2 ]] ; then
+		echo 2
+	fi
+else
+	${COMM}
+fi 
+
+
+
+exit
+
+
+}
+#======================================================}
+
+
+#============================================={
+case $1 in
+	"--tree")
+		if [ -z "$2" ] ; then
+			echo "No PID number, please provide PID number" ; exit 1
+		fi 
+		PS_TREE=$(pstree -paA)
+		PROC.OF.PSTREE_2 "$2"
+		if [ -z "$PROC_PSTREE_OUT" ] ; then echo "PID "$2" not found" ; exit 1 ; fi
+		echo "$PROC_PSTREE_OUT"
+	;;
+	"--trees")
+		pstree -pa
+	;;
+	"--help"|"-h")
+		NETMONIT.HELP
+	;;
+#====================
+	--lsof)    COMM="COMM.LSOF"    ; shift ; LEVEL11 "$@" ;;
+	--netstat) COMM="COMM.NETSTAT" ; shift ; LEVEL11 "$@" ;;
+	--ss)      COMM="COMM.SS"      ; shift ; LEVEL11 "$@" ;;
+	--display-log) echo "-display-log"  ; shift ; 
+	#---------------------------{
+		case "$1" in
+			--last-hour) l1=1 ;;
+			--last-day)  l2=2 ;;
+			--all)       l3=3 ;;
+			*)  echo "Error: With argument --display-log wrong next argument $1 "
+				echo "Available arguments: "
+				echo "	--last-hour" 
+				echo "	--last-day" 
+				echo "	--all" 
+				exit ;;
+		esac
+	#---------------------------}
+		exit 0
+	;;
+	--filter-log) echo "--filter-log"  ; shift ; 
+	#---------------------------{
+		case "$1" in
+			--most-of-all) l1=1 ;;
+			--least-of-all)  l2=2 ;;
+			*)  echo "Error: With argument --filter-log wrong next argument $1 " 
+				echo "Available arguments: "
+				echo "	--most-of-all" 
+				echo "	--least-of-all" 
+				exit ;;
+		esac
+	#---------------------------}
+		exit 0
+	;;
+#====================
+	*)
+		echo "Unknown argument: $1"
+		echo "	Try use: $0 --help"
+	;; 
+esac
+#=============================================}
+

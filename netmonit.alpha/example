@@ -1,0 +1,5 @@
+# netstat -tup
+Active Internet connections (w/o servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 x:56494              ec2-54:https ESTABLISHED 2194/firefox        
+tcp        0      0 x:40518              waw07s:https ESTABLISHED 2194/firefox 

@@ -115,12 +115,6 @@ L.SLEEP() {
 
 
 case $1 in
-	"--net")
-		LIST_NET ; echo "$NEW_LINES"
-	;;
-	"--apps")
-		LIST_APPS
-	;;
 	"--tree")
 		if [ -z "$2" ] ; then
 			echo "No PID number, please provide PID number" ; exit 1
