@@ -25,14 +25,96 @@ source lib/lib.comm
 source lib/lib.netmonit.help
 
 
+F.SHORT() {
+	"${COMM}" | awk '{print $1, $2}' | sort | uniq | sort
+}
 
 
-L.SLEEP4() {
-echo "mm3 = $m3"
+F.SHORT.COUNT() {
+	CON_1=$("${COMM}" | awk '{print $1, $2}' | sort | uniq -c | sort)
+	OLD_1="$NEW_1"
+	NEW_1="$CON_1"
+	COMPARE=$(comm -13 <(echo "$OLD_1") <(echo "$NEW_1"))
+	if [ ! -z "$COMPARE" ] ; then
+		while read LINE ; do
+			DATE_LOG=$(date +"%Y-%m-%d %T")
+			if [ "$V_LOG" == 4 ] ; then
+				echo "$DATE_LOG  $LINE" >> /var/log/netmonit.log
+			else
+				echo "$DATE_LOG  $LINE"
+			fi
 
+			if [ "$V_CATCH" == 3 ] ; then
+				#if [ "$V_CATCH" == 3 ] ; then
+				#	PID=$(awk '{print $5}' <<< "$LINE")
+				#	echo $PID
+				#fi
+
+				case "$CATCH" in
+					pid) PID=$(awk '{print $3}' <<< "$LINE")
+						if [ "$PID" == "$NAME" ] ; then
+
+							pstree -pts "$PID"
+
+							#PROC.OF.PSTREE_2 "$PID"
+							#if [ -z "$PROC_PSTREE_OUT" ] ; then 
+							#	echo "  PID not found "$PID""
+							#else
+							#	YELLOW_ECHO "$PROC_PSTREE_OUT"
+							#fi
+						fi
+
+					;;
+					name)
+						if grep -q "$NAME" <<< "$LINE" ; then
+							PID=$(awk '{print $3}' <<< "$LINE")
+
+							pstree -pts "$PID"
+
+							#PROC.OF.PSTREE_2 "$PID"
+							#if [ -z "$PROC_PSTREE_OUT" ] ; then 
+							#	echo "  PID not found "$PID""
+							#else
+							#	YELLOW_ECHO "$PROC_PSTREE_OUT"
+							#fi
+						fi
+					;;
+					first-pid) PID=$(awk '{print $5}' <<< "$LINE")
+						if [ "$PID" == "$NAME" ] ; then
+							if [ ! "$LOCK" == "1" ] ; then
+								pstree -pts "$PID"
+							fi
+							LOCK=1
+						fi
+					;;
+					first-name)
+						if grep -q "$NAME" <<< "$LINE" ; then
+							if [ ! "$LOCK" == "1" ] ; then
+								PID=$(awk '{print $3}' <<< "$LINE")
+								pstree -pts "$PID"
+							fi
+							LOCK=1
+						fi
+					;;
+				esac
+			fi
+
+		done <<< "$COMPARE"
+	fi
+}
+
+
+F.LOOP.S() {
 	while true ; do
-		date +"%Y-%m-%d %T"
+		if [[ "$V_SHORTEN" == 1 ]] ; then
+			if [[ "$V_NEW" == 1 ]] ; then
+				F.SHORT.COUNT
+			else
+				F.SHORT
+			fi
+		else
 			${COMM}
+		fi
 		sleep 1
 	done
 }
@@ -40,74 +122,62 @@ echo "mm3 = $m3"
 
 #======================================================{
 LEVEL11() {
-echo "12 ; $@"
-
-
 while (($#)) ; do
-	echo "petla = $# "
+	#echo "loop = $# "
 	case "$1" in
-	--shorten) m1=1 ; shift  
-	#---------------------------{
-		case "$1" in
-		to-name) sposob=1 ;;
-		to-count) sposob=2 ;;
-		*)  echo "m = $1" ; echo "blad 4" ; exit ;;
-		esac
-	#---------------------------}
+	--shorten) V_SHORTEN=1 ;
 	;;
-	--sleep)  m2=2 ;;
-	--catch)  m3=3  ; shift ; 
+	--loop-s) V_LOOP_S=2  ;;
+	# In loop, it only displays when there are new connections 
+	--loop-s-new) V_LOOP_S=2 ;  V_SHORTEN=1 ; V_NEW=1 ;;
+	--catch)  V_CATCH=3  ; shift ; 
 
 	#---------------------------{
-		[[ -z "$1" ]] && { echo "Error: First argument is empty" ; exit 1 ;}
-		[[ -z "$2" ]] && { echo "Error: Second argument is empty" ; exit 1 ;}
-
-		echo "$1 $2 ; nice"
+		[[ -z "$1" ]] && { echo "Error: First  argument "$1"  of --catch is empty" ; exit 1 ;}
+		[[ -z "$2" ]] && { echo "Error: Second argument "$2"  of --catch is empty" ; exit 1 ;}
 
 		case "$1" in
-		pid) catch=pid ; name=$2 ;;
-		name) catch=name ; name=$2 ;;
-		first-pid) catch=first-pid  ; name=$2 ;;
-		first-name) catch=first-name ; name=$2 ;;
-		*)  echo "m = $1" ; echo "blad 4" ; exit ;;
+			pid)  CATCH=pid  ; NAME="$2" ;;
+			name) CATCH=name ; NAME="$2" ;;
+			first-pid)  CATCH=first-pid  ; NAME="$2" ;;
+			first-name) CATCH=first-name ; NAME="$2" ;;
+			*) 	echo "Error: With argument --catch . Wrong next argument: $1 " 
+				echo "Available arguments: "
+				echo "	pid" 
+				echo "	name" 
+				echo "	first-pid" 
+				echo "	first-name" 
+				exit ;;
 		esac
 		shift
 	#---------------------------}
 		shift
 	;;
-	--log)   m4=4 ;;
-	*)  echo "m = $1" ; echo "blad 2" ; exit ;;
+	--log)   V_LOG=4 ;;
+	*) echo "Error: Wrong argument: $1 "  ; exit ;;
 	esac
 	shift
 done
 
-[[ $m1 == 1 ]] && { [[ -z "$sposob" ]] && { echo "Blad 3" ; exit 1 ;} ;}
+#[[ $V_SHORTEN == 1 ]] && { [[ -z "$WAY" ]] && { echo "Error:  variable WAY is empty" ; exit 1 ;} ;}
 
 
-echo "A = $@"
-# shorten ; sposob       ; sleep    ; catch name            ; log
-echo "m1 = $m1 ; $sposob ; m2 = $m2 ; m3= $m3 ;$catch $name ;m4 = $m4"
+#     shorten                 ; WAY  ; loop               ; catch name                        ; log
+echo "V_SHORTEN = $V_SHORTEN -> $V_WAY_TO ; V_LOOP_S = $V_SLEEP ; V_CATCH= $V_CATCH -> $CATCH $NAME ; V_LOG = $V_LOG"
 echo =====================================
 
 
-
-
-if [[ "$m1" == 1 ]] ; then 
-	if [[ $sposob == 1 ]] ; then 
-		echo 1
-	elif [[ $sposob == 2 ]] ; then
-		echo 2
-	fi
+if [[ "$V_LOOP_S" == 2 ]] ; then
+	F.LOOP.S
 else
-	${COMM}
-fi 
+	if [[ "$V_SHORTEN" == 1 ]] ; then
+		F.SHORT
+	else
+		${COMM}
+	fi
+fi
 
-
-
-exit
-
-
-}
+} 
 #======================================================}
 
 
@@ -138,7 +208,7 @@ case $1 in
 			--last-hour) l1=1 ;;
 			--last-day)  l2=2 ;;
 			--all)       l3=3 ;;
-			*)  echo "Error: With argument --display-log wrong next argument $1 "
+			*)  echo "Error: With argument --display-log . Wrong next argument $1 "
 				echo "Available arguments: "
 				echo "	--last-hour" 
 				echo "	--last-day" 
@@ -153,7 +223,7 @@ case $1 in
 		case "$1" in
 			--most-of-all) l1=1 ;;
 			--least-of-all)  l2=2 ;;
-			*)  echo "Error: With argument --filter-log wrong next argument $1 " 
+			*)  echo "Error: With argument --filter-log . Wrong next argument $1 " 
 				echo "Available arguments: "
 				echo "	--most-of-all" 
 				echo "	--least-of-all" 
@@ -169,4 +239,4 @@ case $1 in
 	;; 
 esac
 #=============================================}
-
+	
