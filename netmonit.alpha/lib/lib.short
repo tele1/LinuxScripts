@@ -1,0 +1,98 @@
+#!/bin/bash
+
+
+F.TREE() {
+echo nnn
+
+	if [[ "$TREE" == 1 ]] ; then
+		pstree -pts "$PID"
+	elif [[ "$TREE" == 2 ]] ; then
+		## Variable "$PS_TREE" is needed for function PROC.OF.PSTREE_2
+		PS_TREE=$(pstree -paA)
+		PROC.OF.PSTREE_2 "$PID"
+	else
+		pstree -pts "$PID"
+	fi
+							#PROC.OF.PSTREE_2 "$PID"
+							#if [ -z "$PROC_PSTREE_OUT" ] ; then 
+							#	echo "  PID not found "$PID""
+							#else
+							#	YELLOW_ECHO "$PROC_PSTREE_OUT"
+							#fi
+}
+
+
+F.SHORT() {
+	##	name + pid
+	"${COMM}" | awk '{print $1, $2}' | sort | uniq | sort
+}
+
+
+F.CATCH.ALL.NEW() {
+		if [[ "$CATCH" == 'all-new' ]] ; then
+			OLD_PIDS="$NEW_PIDS"
+			NEW_PIDS=$(awk '{print $3}' <<< "$COMPARE" | sort)
+			COMPARE_2=$(comm -13 <(echo "$OLD_PIDS") <(echo "$NEW_PIDS"))
+
+			if [ ! -z "$COMPARE_2" ] ; then
+				while read LINE ; do
+					#	if LINE is number
+					if [ "$LINE" -eq "$LINE" ] 2>/dev/null ; then
+						SHOW.OR.LOG "--------------------"
+						SHOW.OR.LOG $(pstree -pts "$LINE")
+						SHOW.OR.LOG "--------------------"
+						SHOW.OR.LOG "$(${COMM})"
+						SHOW.OR.LOG "--------------------"
+					fi
+				done <<< "$COMPARE_2"
+			fi
+		fi
+}
+
+F.CATCH() {
+	if [ "$V_CATCH" == 3 ] ; then
+				case "$CATCH" in
+					pid) PID=$(awk '{print $3}' <<< "$LINE")
+						if [ "$PID" == "$NAME" ] ; then
+							F.TREE
+						fi
+					;;
+					name)
+						if grep -q "$NAME" <<< "$LINE" ; then
+							PID=$(awk '{print $3}' <<< "$LINE")
+							F.TREE
+						fi
+					;;
+				esac
+	fi
+}
+
+
+SHOW.OR.LOG() {
+if [[ "$V_LOG" == 4 ]] ; then
+    echo "$@" >> /var/log/netmonit.log
+else
+	echo "$@"
+fi
+}
+
+
+F.SHORT.COUNT() {
+	##	Show if is something new
+	CON_1=$("${COMM}" | awk '{print $1, $2}' | sort | uniq -c | sort)
+	OLD_1="$NEW_1"
+	NEW_1="$CON_1"
+	COMPARE=$(comm -13 <(echo "$OLD_1") <(echo "$NEW_1"))
+	if [ ! -z "$COMPARE" ] ; then
+		while read LINE ; do
+			DATE_LOG=$(date +"%Y-%m-%d %T")
+			SHOW.OR.LOG "$DATE_LOG  $LINE" 
+			F.CATCH
+
+		done <<< "$COMPARE"
+
+		F.CATCH.ALL.NEW
+	fi
+}
+
+

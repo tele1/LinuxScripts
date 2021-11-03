@@ -23,101 +23,7 @@ source lib/lib.colors
 source lib/lib.pstree
 source lib/lib.comm
 source lib/lib.netmonit.help
-
-
-F.SHORT() {
-	"${COMM}" | awk '{print $1, $2}' | sort | uniq | sort
-}
-
-
-F.SHORT.COUNT() {
-	CON_1=$("${COMM}" | awk '{print $1, $2}' | sort | uniq -c | sort)
-	OLD_1="$NEW_1"
-	NEW_1="$CON_1"
-	COMPARE=$(comm -13 <(echo "$OLD_1") <(echo "$NEW_1"))
-	if [ ! -z "$COMPARE" ] ; then
-		while read LINE ; do
-			DATE_LOG=$(date +"%Y-%m-%d %T")
-			if [ "$V_LOG" == 4 ] ; then
-				echo "$DATE_LOG  $LINE" >> /var/log/netmonit.log
-			else
-				echo "$DATE_LOG  $LINE"
-			fi
-
-			if [ "$V_CATCH" == 3 ] ; then
-				#if [ "$V_CATCH" == 3 ] ; then
-				#	PID=$(awk '{print $5}' <<< "$LINE")
-				#	echo $PID
-				#fi
-
-				case "$CATCH" in
-					pid) PID=$(awk '{print $3}' <<< "$LINE")
-						if [ "$PID" == "$NAME" ] ; then
-
-							pstree -pts "$PID"
-
-							#PROC.OF.PSTREE_2 "$PID"
-							#if [ -z "$PROC_PSTREE_OUT" ] ; then 
-							#	echo "  PID not found "$PID""
-							#else
-							#	YELLOW_ECHO "$PROC_PSTREE_OUT"
-							#fi
-						fi
-
-					;;
-					name)
-						if grep -q "$NAME" <<< "$LINE" ; then
-							PID=$(awk '{print $3}' <<< "$LINE")
-
-							pstree -pts "$PID"
-
-							#PROC.OF.PSTREE_2 "$PID"
-							#if [ -z "$PROC_PSTREE_OUT" ] ; then 
-							#	echo "  PID not found "$PID""
-							#else
-							#	YELLOW_ECHO "$PROC_PSTREE_OUT"
-							#fi
-						fi
-					;;
-					first-pid) PID=$(awk '{print $5}' <<< "$LINE")
-						if [ "$PID" == "$NAME" ] ; then
-							if [ ! "$LOCK" == "1" ] ; then
-								pstree -pts "$PID"
-							fi
-							LOCK=1
-						fi
-					;;
-					first-name)
-						if grep -q "$NAME" <<< "$LINE" ; then
-							if [ ! "$LOCK" == "1" ] ; then
-								PID=$(awk '{print $3}' <<< "$LINE")
-								pstree -pts "$PID"
-							fi
-							LOCK=1
-						fi
-					;;
-				esac
-			fi
-
-		done <<< "$COMPARE"
-	fi
-}
-
-
-F.LOOP.S() {
-	while true ; do
-		if [[ "$V_SHORTEN" == 1 ]] ; then
-			if [[ "$V_NEW" == 1 ]] ; then
-				F.SHORT.COUNT
-			else
-				F.SHORT
-			fi
-		else
-			${COMM}
-		fi
-		sleep 1
-	done
-}
+source lib/lib.short
 
 
 #======================================================{
@@ -127,9 +33,9 @@ while (($#)) ; do
 	case "$1" in
 	--shorten) V_SHORTEN=1 ;
 	;;
-	--loop-s) V_LOOP_S=2  ;;
+	--loop-sleep) V_LOOP_S=2  ;;
 	# In loop, it only displays when there are new connections 
-	--loop-s-new) V_LOOP_S=2 ;  V_SHORTEN=1 ; V_NEW=1 ;;
+	--loop-sleep-only-new) V_LOOP_S=2 ;  V_SHORTEN=1 ; V_NEW=1 ;;
 	--catch)  V_CATCH=3  ; shift ; 
 
 	#---------------------------{
@@ -139,8 +45,6 @@ while (($#)) ; do
 		case "$1" in
 			pid)  CATCH=pid  ; NAME="$2" ;;
 			name) CATCH=name ; NAME="$2" ;;
-			first-pid)  CATCH=first-pid  ; NAME="$2" ;;
-			first-name) CATCH=first-name ; NAME="$2" ;;
 			*) 	echo "Error: With argument --catch . Wrong next argument: $1 " 
 				echo "Available arguments: "
 				echo "	pid" 
@@ -153,7 +57,12 @@ while (($#)) ; do
 	#---------------------------}
 		shift
 	;;
-	--log)   V_LOG=4 ;;
+	##	Working only with loop
+	--catch-all-new) CATCH=all-new ; NAME="$2" ;;
+	--ps-tree) TREE=1 ;;
+	--my-tree) TREE=2 ;;
+	--log-all)   V_LOG=4 ;;
+	#--log-only-new)   V_LOG=5 ;;
 	*) echo "Error: Wrong argument: $1 "  ; exit ;;
 	esac
 	shift
@@ -167,8 +76,20 @@ echo "V_SHORTEN = $V_SHORTEN -> $V_WAY_TO ; V_LOOP_S = $V_SLEEP ; V_CATCH= $V_CA
 echo =====================================
 
 
+##	More in lib/lib.short
 if [[ "$V_LOOP_S" == 2 ]] ; then
-	F.LOOP.S
+	while true ; do
+		if [[ "$V_SHORTEN" == 1 ]] ; then
+			if [[ "$V_NEW" == 1 ]] ; then
+				F.SHORT.COUNT
+			else
+				F.SHORT
+			fi
+		else
+			${COMM}
+		fi
+		sleep 1
+	done
 else
 	if [[ "$V_SHORTEN" == 1 ]] ; then
 		F.SHORT
@@ -202,37 +123,41 @@ case $1 in
 	--lsof)    COMM="COMM.LSOF"    ; shift ; LEVEL11 "$@" ;;
 	--netstat) COMM="COMM.NETSTAT" ; shift ; LEVEL11 "$@" ;;
 	--ss)      COMM="COMM.SS"      ; shift ; LEVEL11 "$@" ;;
-	--display-log) echo "-display-log"  ; shift ; 
-	#---------------------------{
-		case "$1" in
-			--last-hour) l1=1 ;;
-			--last-day)  l2=2 ;;
-			--all)       l3=3 ;;
-			*)  echo "Error: With argument --display-log . Wrong next argument $1 "
-				echo "Available arguments: "
-				echo "	--last-hour" 
-				echo "	--last-day" 
-				echo "	--all" 
-				exit ;;
-		esac
-	#---------------------------}
-		exit 0
-	;;
-	--filter-log) echo "--filter-log"  ; shift ; 
-	#---------------------------{
-		case "$1" in
-			--most-of-all) l1=1 ;;
-			--least-of-all)  l2=2 ;;
-			*)  echo "Error: With argument --filter-log . Wrong next argument $1 " 
-				echo "Available arguments: "
-				echo "	--most-of-all" 
-				echo "	--least-of-all" 
-				exit ;;
-		esac
-	#---------------------------}
-		exit 0
-	;;
 #====================
+	--display-log) echo "-display-log"  ; 
+					cat /var/log/netmonit.log
+	#---------------------------{
+	#	shift ; 
+	#	case "$1" in
+	#		--last-hour) l1=1 ;;
+	#		--last-day)  l2=2 ;;
+	#		--all)       l3=3 ;;
+	#		*)  echo "Error: With argument --display-log . Wrong next argument $1 "
+	#			echo "Available arguments: "
+	#			echo "	--last-hour" 
+	#			echo "	--last-day" 
+	#			echo "	--all" 
+	#			exit ;;
+	#	esac
+	#---------------------------}
+		exit 0
+	;;
+	#--filter-log) echo "--filter-log"  ; shift ; 
+	#---------------------------{
+	#	case "$1" in
+	#		--most-of-all) l1=1 ;;
+	#		--least-of-all)  l2=2 ;;
+	#		*)  echo "Error: With argument --filter-log . Wrong next argument $1 " 
+	#			echo "Available arguments: "
+	#			echo "	--most-of-all" 
+	#			echo "	--least-of-all" 
+	#			exit ;;
+	#	esac
+	#---------------------------}
+	#	exit 0
+	#;;
+	--remove-log)       rm -v  /var/log/netmonit.log      ; exit 0 ;;
+	--watch-log)      tail -f  /var/log/netmonit.log     ; exit 0 ;;
 	*)
 		echo "Unknown argument: $1"
 		echo "	Try use: $0 --help"
