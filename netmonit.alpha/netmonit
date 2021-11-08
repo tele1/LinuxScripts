@@ -3,7 +3,7 @@
 
 # Developed for Linux
 # License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Version 5
+# Version 7
 # Destiny: Network connection statistics 
 # Script usage: bash script --help
 
@@ -39,8 +39,8 @@ while (($#)) ; do
 	--catch)  V_CATCH=3  ; shift ; 
 
 	#---------------------------{
-		[[ -z "$1" ]] && { echo "Error: First  argument "$1"  of --catch is empty" ; exit 1 ;}
-		[[ -z "$2" ]] && { echo "Error: Second argument "$2"  of --catch is empty" ; exit 1 ;}
+		[[ -z "$1" ]] && { echo "Error: First  argument $1  of --catch is empty" ; exit 1 ;}
+		[[ -z "$2" ]] && { echo "Error: Second argument $2  of --catch is empty" ; exit 1 ;}
 
 		case "$1" in
 			pid)  CATCH=pid  ; NAME="$2" ;;
@@ -71,8 +71,7 @@ done
 #[[ $V_SHORTEN == 1 ]] && { [[ -z "$WAY" ]] && { echo "Error:  variable WAY is empty" ; exit 1 ;} ;}
 
 
-#     shorten                 ; WAY  ; loop               ; catch name                        ; log
-echo "V_SHORTEN = $V_SHORTEN -> $V_WAY_TO ; V_LOOP_S = $V_SLEEP ; V_CATCH= $V_CATCH -> $CATCH $NAME ; V_LOG = $V_LOG"
+echo "--loop = $V_SLEEP ; --shorten = $V_SHORTEN;  ; V_CATCH= $V_CATCH -> $CATCH $NAME ; V_LOG = $V_LOG ; --tree = $TREE"
 echo =====================================
 
 
@@ -104,15 +103,14 @@ fi
 
 #============================================={
 case $1 in
-	"--tree")
-		if [ -z "$2" ] ; then
-			echo "No PID number, please provide PID number" ; exit 1
-		fi 
-		PS_TREE=$(pstree -paA)
-		PROC.OF.PSTREE_2 "$2"
-		if [ -z "$PROC_PSTREE_OUT" ] ; then echo "PID "$2" not found" ; exit 1 ; fi
+	"--my-tree")
+		PID="$2"
+		TREE=2
+		# Part of lib/lib.short
+		F.TREE
 		echo "$PROC_PSTREE_OUT"
 	;;
+	"--ps-tree") pstree -ptsa "$2" ;;
 	"--trees")
 		pstree -pa
 	;;
@@ -156,7 +154,7 @@ case $1 in
 	#---------------------------}
 	#	exit 0
 	#;;
-	--remove-log)       rm -v  /var/log/netmonit.log      ; exit 0 ;;
+	--remove-log)       rm -v  /var/log/netmonit.log     ; exit 0 ;;
 	--watch-log)      tail -f  /var/log/netmonit.log     ; exit 0 ;;
 	*)
 		echo "Unknown argument: $1"

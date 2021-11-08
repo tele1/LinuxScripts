@@ -2,23 +2,21 @@
 
 
 F.TREE() {
-echo nnn
+	if [ -z "$PID" ] ; then
+		echo "No PID number, please provide PID number" ; exit 1
+	fi 
 
+	##	ps-tree
 	if [[ "$TREE" == 1 ]] ; then
-		pstree -pts "$PID"
+		PROC_PSTREE_OUT=$(pstree -ptsa "$PID")
+	##	my-tree
 	elif [[ "$TREE" == 2 ]] ; then
 		## Variable "$PS_TREE" is needed for function PROC.OF.PSTREE_2
-		PS_TREE=$(pstree -paA)
+		PS_TREE=$(pstree -paAt)
 		PROC.OF.PSTREE_2 "$PID"
 	else
-		pstree -pts "$PID"
+		PROC_PSTREE_OUT=$(pstree -ptsa "$PID")
 	fi
-							#PROC.OF.PSTREE_2 "$PID"
-							#if [ -z "$PROC_PSTREE_OUT" ] ; then 
-							#	echo "  PID not found "$PID""
-							#else
-							#	YELLOW_ECHO "$PROC_PSTREE_OUT"
-							#fi
 }
 
 
@@ -38,11 +36,14 @@ F.CATCH.ALL.NEW() {
 				while read LINE ; do
 					#	if LINE is number
 					if [ "$LINE" -eq "$LINE" ] 2>/dev/null ; then
-						SHOW.OR.LOG "--------------------"
-						SHOW.OR.LOG $(pstree -pts "$LINE")
-						SHOW.OR.LOG "--------------------"
+						SHOW.OR.LOG "--------------------{"
+						PID="$LINE"
+						#echo "TREE = $TREE ; $PID"
+						F.TREE
+						SHOW.OR.LOG "$(echo "$PROC_PSTREE_OUT")"
+						SHOW.OR.LOG "-----------"
 						SHOW.OR.LOG "$(${COMM})"
-						SHOW.OR.LOG "--------------------"
+						SHOW.OR.LOG "--------------------}"
 					fi
 				done <<< "$COMPARE_2"
 			fi
@@ -69,11 +70,17 @@ F.CATCH() {
 
 
 SHOW.OR.LOG() {
-if [[ "$V_LOG" == 4 ]] ; then
-    echo "$@" >> /var/log/netmonit.log
-else
-	echo "$@"
-fi
+	if [[ "$V_LOG" == 4 ]] ; then
+		echo "$@" >> /var/log/netmonit.log
+	else
+		echo "$@"
+	fi
+
+	# Change log if file is bigger than 1 MB.
+	if [ $(stat -c%s "/var/log/netmonit.log") -gt '1048576' ]; then
+		if [ -f "/var/log/netmonit.log.1" ]; then rm /var/log/netmonit.log.1 ; fi
+		mv /var/log/netmonit.log /var/log/netmonit.log.1
+	fi
 }
 
 
