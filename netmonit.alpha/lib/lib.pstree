@@ -29,51 +29,110 @@ while IFS=',' read -r COLUMNS_AND_NAME  PID_AND_ARGUMENTS ; do
 	if [[ "$OLD_NUMBER_CHARS" -eq "0" ]] ; then
 		OLD_NUMBER_CHARS="1" 
 		TAB_ABOVE[$KOLUMN]="$LINE"
-	#	if not Part Bellow
+		DEBUG " First line saved"
 	elif [[ "$BREAK" == "0" ]] ; then
 		# divide "$COLUMNS_AND_NAME"
 		while IFS='-' read -r SOME_CHARS  PROCESS_NAME ; do
 			NUMBER_CHARS="${#SOME_CHARS}"
 
 			# For Debug
-			#echo "LINE:$LINE"
-			#echo "NUMBER_CHARS = $NUMBER_CHARS ; OLD_NUMBER_CHARS = $OLD_NUMBER_CHARS"
+			echo " "
+			echo '=========={'
+			echo "LINE:$LINE"
+			echo "NUMBER_CHARS = $NUMBER_CHARS ; OLD_NUMBER_CHARS = $OLD_NUMBER_CHARS"
 		
 			# if next tree
 			if [[ "$NUMBER_CHARS" -gt "$OLD_NUMBER_CHARS" ]] ; then
 				KOLUMN="$[$KOLUMN + 1]"
 				TAB3[$KOLUMN]="$NUMBER_CHARS"  ;
 				TAB_ABOVE[$KOLUMN]="$LINE"  ;
+				DEBUG " This line gt than saved ; KOLUMN = $KOLUMN"
+					echo "---- Tab Above ----"
+					printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}}"
+					echo "-------------------"
 
 			# if the same tree
 			elif [[ "$NUMBER_CHARS" -eq "$OLD_NUMBER_CHARS" ]] ; then
 				KOLUMN="$KOLUMN"
 				TAB3[$KOLUMN]="$NUMBER_CHARS"
 				TAB_ABOVE[$KOLUMN]="$LINE"  ;
+				DEBUG "	This line eq than saved ; KOLUMN = $KOLUMN"
+					echo "---- Tab Above ----"
+					printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}}"
+					echo "-------------------"
 
 			# if one of the earlier tree
 			elif [[ "$NUMBER_CHARS" -lt "$OLD_NUMBER_CHARS" ]] ; then
+				DEBUG "	This line lt than saved ; KOLUMN = $KOLUMN"
+
+				echo "TAB3 before TAB3_NUMBER for loop: ${TAB3[@]}"
+				echo "We will remove lines earlier, bigger than "$NUMBER_CHARS""
 				COUNT_LOCAL=1
-				##	DEBUG:
-				#echo "TAB3 before TAB3_NUMBER loop: ${TAB3[@]}"
-				
 				for TAB3_NUMBER in "${TAB3[@]}" ; do
-					if   [[ "$TAB3_NUMBER" -eq "$NUMBER_CHARS" ]] ; then
-						break
-					elif [[ "$TAB3_NUMBER" -gt "$NUMBER_CHARS" ]] ; then
-						break
+
+
+
+					if   [[ "$NUMBER_CHARS" -eq "$TAB3_NUMBER" ]] ; then
+						DEBUG "	: "$NUMBER_CHARS" = "$TAB3_NUMBER". Line skipped."
+#						KOLUMN="$COUNT_LOCAL"
+#						TAB3[$KOLUMN]="$NUMBER_CHARS"
+##						TAB_ABOVE[$KOLUMN]="$LINE" 
+#							echo "---- Tab Above in for loop ----"
+#							printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}"
+#							echo "-------------------------------"
+
+
+#							DEBUG "Remove lines () bigger than this kolumn $KOLUMN to ${#TAB3[@]}"
+#							TO_REMOVE_COUNT="$[$KOLUMN+1]"
+#							while [ "$TO_REMOVE_COUNT" -le "${#TAB3[@]}" ] ; do
+#								#echo $TO_REMOVE_COUNT
+#								unset TAB3[$TO_REMOVE_COUNT]
+#								unset TAB_ABOVE[$TO_REMOVE_COUNT]
+#								TO_REMOVE_COUNT="$[$TO_REMOVE_COUNT+1]"
+#							done
+
+#								echo "---- Tab Above in for loop after remove ----"
+#								printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}}"
+#								echo "--------------------------------------------"
+
+							#break
+
+					elif [[ "$NUMBER_CHARS" -gt "$TAB3_NUMBER" ]] ; then
+						DEBUG "	: "$NUMBER_CHARS" > "$TAB3_NUMBER". Line removed"
+#						KOLUMN="$COUNT_LOCAL"
+#						TAB3[$KOLUMN]="$NUMBER_CHARS"
+#						TAB_ABOVE[$KOLUMN]="$LINE" 
+#							echo "---- Tab Above in for loop ----"
+#							printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}"
+#							echo "-------------------------------"
+
+#							DEBUG "Remove lines () bigger than this kolumn $KOLUMN to ${#TAB3[@]}"
+#							TO_REMOVE_COUNT="$[$KOLUMN+1]"
+
+						# KOLUMN="$COUNT_LOCAL"
+						unset TAB3[$COUNT_LOCAL]
+						unset TAB_ABOVE[$COUNT_LOCAL]
+
+					elif [[ "$NUMBER_CHARS" -lt "$TAB3_NUMBER" ]] ; then
+						DEBUG "	: "$NUMBER_CHARS" < "$TAB3_NUMBER". Line skipped "
+						#continue
 					fi
+
 					COUNT_LOCAL=$[$COUNT_LOCAL + 1]
-					#echo "TAB3_NUMBER=$TAB3_NUMBER"
-					#echo "COUNT_LOCAL=$COUNT_LOCAL"
+#					echo "TAB3_NUMBER=$TAB3_NUMBER"
+#					echo "COUNT_LOCAL=$COUNT_LOCAL"
+#
 				done
+					echo "---- Tab Above ----"
+					printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}}"
+					echo "-------------------"
+#DEBUG "Other"
+				#KOLUMN=$COUNT_LOCAL
+				#TAB3[$KOLUMN]="$NUMBER_CHARS"
+				#TAB_ABOVE[$KOLUMN]="$LINE"  ;
 
-				KOLUMN=$COUNT_LOCAL
-				TAB3[$KOLUMN]="$NUMBER_CHARS"
-				TAB_ABOVE[$KOLUMN]="$LINE"  ;
-
-				#echo "Before loop: $[$COUNT_LOCAL + 1] ; ${#TAB3[@]}"
-				#echo "=========={"
+				#echo "=========={ Before loop while NUMBER_M: $[$COUNT_LOCAL + 1] ; ${#TAB3[@]}"
+				#echo "=========="
 				#printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}"
 				#echo "==========}"
 
@@ -82,23 +141,23 @@ while IFS=',' read -r COLUMNS_AND_NAME  PID_AND_ARGUMENTS ; do
 				# Remove older from TAB3
 				##	 We need use while loop instead for loop + seq ( because it can be interpreted with and without quotation marks )
 				#for M in  $( seq $[$COUNT_LOCAL + 1] ${#TAB3[@]} ) ; do
-				NUMBER_M="$COUNT_LOCAL"
-				while [ $NUMBER_M -le ${#TAB3[@]} ] ; do
+				#NUMBER_M="$COUNT_LOCAL"
+				#while [ $NUMBER_M -le ${#TAB3[@]} ] ; do
 					## For Debug
-					if [[ $(wc -l <<< "$NUMBER_M") -gt 1 ]] ;then
-						echo "Error: element NUMBER_M have more lines than 1."
-						echo "Debugging: NUMBER_M = $NUMBER_M"
-					fi
+				#	if [[ $(wc -l <<< "$NUMBER_M") -gt 1 ]] ;then
+				#		echo "Error: element NUMBER_M have more lines than 1."
+				#		echo "Debugging: NUMBER_M = $NUMBER_M"
+				#	fi
 
 					##	remove from TAB3
-					unset TAB3[$NUMBER_M]
-					unset TAB_ABOVE[$NUMBER_M]
+				#	unset TAB3[$NUMBER_M]
+				#	unset TAB_ABOVE[$NUMBER_M]
 
 					## refresh counting 
-					NUMBER_M=$[$NUMBER_M+1]
-				done
+				#	NUMBER_M=$[$NUMBER_M+1]
+				#done
 
-				#echo "==== After loop ===={"
+				#echo "==== After loop while NUMBER_M ===={"
 				#printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}"
 				#echo "====================}"
 			fi
@@ -171,7 +230,8 @@ done <<< "$PS_TREE"
 #echo "==========}"
 
 if [ ! -z "${PART_CENTER}" ] ; then
-	PROC_PSTREE_OUT=$(printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}" "${PART_CENTER}" "${PART_BELOW[@]}")
+	#PROC_PSTREE_OUT=$(printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}" "${PART_CENTER}" "${PART_BELOW[@]}")
+	PROC_PSTREE_OUT=$(printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}" "${PART_CENTER}")
 
 	##	DEBUG:
 	#echo "== PROC_PSTREE_OUT =={"

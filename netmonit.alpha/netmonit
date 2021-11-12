@@ -3,7 +3,7 @@
 
 # Developed for Linux
 # License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Version 7
+# Version 8
 # Destiny: Network connection statistics 
 # Script usage: bash script --help
 
@@ -33,7 +33,8 @@ while (($#)) ; do
 	case "$1" in
 	--shorten) V_SHORTEN=1 ;
 	;;
-	--loop-sleep) V_LOOP_S=2  ;;
+	--loop-sleep) V_LOOP_S=2   ;;
+	--loop-ip)    V_LOOP_IP=2  ;;
 	# In loop, it only displays when there are new connections 
 	--loop-sleep-only-new) V_LOOP_S=2 ;  V_SHORTEN=1 ; V_NEW=1 ;;
 	--catch)  V_CATCH=3  ; shift ; 
@@ -71,24 +72,33 @@ done
 #[[ $V_SHORTEN == 1 ]] && { [[ -z "$WAY" ]] && { echo "Error:  variable WAY is empty" ; exit 1 ;} ;}
 
 
-echo "--loop = $V_SLEEP ; --shorten = $V_SHORTEN;  ; V_CATCH= $V_CATCH -> $CATCH $NAME ; V_LOG = $V_LOG ; --tree = $TREE"
+echo "--loop = $V_SLEEP ; --shorten = $V_SHORTEN;  ; --catch... V_CATCH= $V_CATCH -> $CATCH $NAME ; V_LOG = $V_LOG ; --tree = $TREE"
 echo =====================================
+
+
+
 
 
 ##	More in lib/lib.short
 if [[ "$V_LOOP_S" == 2 ]] ; then
 	while true ; do
-		if [[ "$V_SHORTEN" == 1 ]] ; then
-			if [[ "$V_NEW" == 1 ]] ; then
-				F.SHORT.COUNT
-			else
-				F.SHORT
-			fi
-		else
-			${COMM}
-		fi
+		COMMAND.IN.WHILE
 		sleep 1
 	done
+
+elif [[ "$V_LOOP_IP" == 2 ]] ; then
+	while inotifywait  -q -e modify,delete_self,move_self /var/log/iptables.log &>/dev/null ; do
+		if [ ! -f '/var/log/iptables.log' ]; then
+			echo "Error:	Missing /var/log/iptables.log file."
+			echo "	This is for advanced users ! Because you need to configure the iptables firewall alone."
+			echo "	You can try search more in:"
+			echo "	command --help"
+			echo " "
+			exit 0
+		fi
+		COMMAND.IN.WHILE
+	done
+
 else
 	if [[ "$V_SHORTEN" == 1 ]] ; then
 		F.SHORT
@@ -117,11 +127,6 @@ case $1 in
 	"--help"|"-h")
 		NETMONIT.HELP
 	;;
-#====================
-	--lsof)    COMM="COMM.LSOF"    ; shift ; LEVEL11 "$@" ;;
-	--netstat) COMM="COMM.NETSTAT" ; shift ; LEVEL11 "$@" ;;
-	--ss)      COMM="COMM.SS"      ; shift ; LEVEL11 "$@" ;;
-#====================
 	--display-log) echo "-display-log"  ; 
 					cat /var/log/netmonit.log
 	#---------------------------{
@@ -156,6 +161,11 @@ case $1 in
 	#;;
 	--remove-log)       rm -v  /var/log/netmonit.log     ; exit 0 ;;
 	--watch-log)      tail -f  /var/log/netmonit.log     ; exit 0 ;;
+#====================
+	--lsof)    COMM="COMM.LSOF"    ; shift ; LEVEL11 "$@" ;;
+	--netstat) COMM="COMM.NETSTAT" ; shift ; LEVEL11 "$@" ;;
+	--ss)      COMM="COMM.SS"      ; shift ; LEVEL11 "$@" ;;
+#====================
 	*)
 		echo "Unknown argument: $1"
 		echo "	Try use: $0 --help"

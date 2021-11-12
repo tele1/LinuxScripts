@@ -1,6 +1,19 @@
 #!/bin/bash
 
 
+COMMAND.IN.WHILE() {
+		if [[ "$V_SHORTEN" == 1 ]] ; then
+			if [[ "$V_NEW" == 1 ]] ; then
+				F.SHORT.COUNT
+			else
+				F.SHORT
+			fi
+		else
+			${COMM}
+		fi
+}
+
+
 F.TREE() {
 	if [ -z "$PID" ] ; then
 		echo "No PID number, please provide PID number" ; exit 1
@@ -13,6 +26,7 @@ F.TREE() {
 	elif [[ "$TREE" == 2 ]] ; then
 		## Variable "$PS_TREE" is needed for function PROC.OF.PSTREE_2
 		PS_TREE=$(pstree -paAt)
+		echo "	Warning: This function is broken for now."
 		PROC.OF.PSTREE_2 "$PID"
 	else
 		PROC_PSTREE_OUT=$(pstree -ptsa "$PID")
@@ -27,7 +41,6 @@ F.SHORT() {
 
 
 F.CATCH.ALL.NEW() {
-		if [[ "$CATCH" == 'all-new' ]] ; then
 			OLD_PIDS="$NEW_PIDS"
 			NEW_PIDS=$(awk '{print $3}' <<< "$COMPARE" | sort)
 			COMPARE_2=$(comm -13 <(echo "$OLD_PIDS") <(echo "$NEW_PIDS"))
@@ -37,6 +50,10 @@ F.CATCH.ALL.NEW() {
 					#	if LINE is number
 					if [ "$LINE" -eq "$LINE" ] 2>/dev/null ; then
 						SHOW.OR.LOG "--------------------{"
+						SHOW.OR.LOG "$DATE_LOG ; PID = $LINE"
+						SHOW.OR.LOG "-----------"
+						SHOW.OR.LOG $(grep $LINE <<< "$COMPARE")
+						SHOW.OR.LOG "-----------"
 						PID="$LINE"
 						#echo "TREE = $TREE ; $PID"
 						F.TREE
@@ -47,7 +64,6 @@ F.CATCH.ALL.NEW() {
 					fi
 				done <<< "$COMPARE_2"
 			fi
-		fi
 }
 
 F.CATCH() {
@@ -92,13 +108,25 @@ F.SHORT.COUNT() {
 	COMPARE=$(comm -13 <(echo "$OLD_1") <(echo "$NEW_1"))
 	if [ ! -z "$COMPARE" ] ; then
 		while read LINE ; do
+			LOG_DATE_AND_LINE=""
 			DATE_LOG=$(date +"%Y-%m-%d %T")
-			SHOW.OR.LOG "$DATE_LOG  $LINE" 
+			#SHOW.OR.LOG "$DATE_LOG  $LINE"
+			 	if [[ "$CATCH" == 'all-new' ]] ; then
+A=B
+					#LOG_DATE_AND_LINE="$DATE_LOG  $LINE"
+#DEP="$DEP"$'\n'"uniq"
+#LOG_DATE_AND_LINE="$LOG_DATE_AND_LINE"$'\n'"$DATE_LOG  $LINE"
+				else
+					SHOW.OR.LOG "$DATE_LOG  $LINE"
+				fi
+			
 			F.CATCH
 
 		done <<< "$COMPARE"
 
-		F.CATCH.ALL.NEW
+		if [[ "$CATCH" == 'all-new' ]] ; then
+			F.CATCH.ALL.NEW
+		fi
 	fi
 }
 

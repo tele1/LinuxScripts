@@ -10,16 +10,24 @@ NETMONIT.HELP() {
 		echo " Usage:   $0 --option"
 		echo " "
 		echo " Options:"
+		echo "       --ps-tree              "
+		echo " "
+		echo "       --my-tree              "
+		echo " "
 		echo " "
 		echo "       --apps                 Total running now number of connections + name of application."
 		echo " "
-		echo "       --tree PID_number      Display a tree of one process."
+		echo "       --ps-tree PID_number      Display a tree of one process."
 		echo "                              This is the same as \" pstree -spaA \" command."
 		echo "                              It was designed for --l.ip and --l.sleep options to extract a process multiple times"
 		echo "                               from a single output of \" pstree -pa \" ."
 		echo "                              Because the life time of each process is limited."
 		echo "                              - The option may have errors."
 		echo " "
+		echo "       --my-tree              Workaround - not working perfectly yet."
+		echo " "
+		echo " "
+
 		echo "       --trees                Display the entire process tree. ( It's the same as: pstree -pa )"
 		echo " "
 		echo "   -h  --help                 Show this help."
@@ -38,39 +46,48 @@ NETMONIT.HELP() {
 		echo " "
 		echo "  Options for monitoring system: "
 		echo " "
-		echo "		The first option level: "
-		echo " "
-		echo "       --lsof             "
-		echo " "
-		echo "       --netstat              "
-		echo " "
-		echo "       --ss              "
-		echo " "
-		echo "		The second option level: "
-		echo " "
-		echo "       --loop.sleep              Allows you to watch new internet connections continuously."
-		echo "                              It uses the \"sleep\" command to perform pauses in operation."
-		echo " "
-		echo "       --loop.ip              (not exist now)   Allows you to watch new internet connections continuously."
-		echo "                              It uses a separate iptables log file and  \"inotifywait\" command."
-		echo "                              For proper operation is required manual configuration of iptables."
-		echo " "
-		echo "       --shorten              "
-		echo " "
-		echo "       --catch             "
-		echo " "
-		echo "       --ps-tree              "
-		echo " "
-		echo "       --my-tree              "
-		echo " "
-		echo "       --log-all              Logging working only with loop"
-		echo " "
-		echo "       --log-only-new              "
-		echo " "
+		echo "		The first level arguments: "
+
 		echo "       --remove-log              "
 		echo " "
 		echo "       --watch-log              "
 		echo " "
+		echo "---------------------------------------------------------------------------------------"
+		echo "       --lsof                 "
+		echo " "
+		echo "       --netstat              "
+		echo " "
+		echo "       --ss                   "
+		echo "---------------------------------------------------------------------------------------"
+		echo " "
+		echo "		The second level arguments: "
+		echo " "
+		echo "       --loop.sleep             Allows you to watch new internet connections continuously."
+		echo "                              It uses the \"sleep\" command to perform pauses in operation."
+		echo " "
+		echo "       --loop.ip                Allows you to watch new internet connections continuously."
+		echo "                              It uses a separate iptables log file and  \"inotifywait\" command."
+		echo "                              For proper operation is required manual configuration of iptables."
+		echo " "
+		echo "      Curio for developers "
+		echo "		- About /proc and why we can not use. This is the reason why I use /var/log/iptables.log "
+		echo "				https://unix.stackexchange.com/questions/90627/notify-of-changes-on-a-file-under-proc "
+		echo "				https://www.tecmint.com/exploring-proc-file-system-in-linux/ "
+		echo "				https://www.slashroot.in/proc-file-system-linux-explained "
+		echo "				https://tldp.org/LDP/Linux-Filesystem-Hierarchy/html/proc.html "
+		echo "		- Read also end of file lib/lib.netmonit.help for more help if you want configure iptables."
+		echo " "
+		echo " "
+		echo "       --shorten              "
+		echo " "
+		echo "       --catch                "
+		echo " "
+
+		echo "       --log-all              Logging working only with loop"
+		echo " "
+		echo "       --log-only-new              "
+		echo " "
+
 		echo "---------------------------------------------------------"
 		echo " "
 		echo "	Example:"
@@ -78,5 +95,41 @@ NETMONIT.HELP() {
 		echo " 		bash netmonit --lsof --loop-sleep-only-new --catch-all-new --log-all"
 		echo " "
 }
+
+#---- Configure log ------------------------{
+##		Create file /etc/rsyslog.d/10-iptables.conf
+##		 ( Number 10 from "10-iptables.conf" is to load faster than 50-default.conf
+##	:msg,contains,"[IPTables] " /var/log/iptables.log
+
+
+##		Create file /etc/logrotate.d/iptables
+##	/var/log/iptables.log
+##	{
+##		rotate 2
+##		daily
+##		missingok
+##		notifempty
+##		delaycompress
+##		compress
+##		postrotate
+##			invoke-rc.d rsyslog rotate > /dev/null
+##		endscript
+##	}
+
+
+##		Run command
+##	service rsyslog restart
+
+
+##		Set Firewall iptables, for example:
+##	iptables -N CHAINFILTR
+##	iptables -A OUTPUT -m conntrack --ctstate NEW -j CHAINFILTR
+##	iptables -A CHAINFILTR -m recent --set --name FILTRNOWY --mask 255.255.255.255 --rdest
+##	iptables -A CHAINFILTR -m recent ! --rcheck --seconds 60 --hitcount 2 --name FILTRNOWY --mask 255.255.255.255 --rdest -j LOG --log-prefix "[iptables] "
+
+
+##		Test: run it and check iptables.log
+##	for K in {1..240} ; do  date +%T ; nc -vz 127.0.0.1 58 ; sleep 2 ; done
+#---- Configure log ------------------------}
 
 
