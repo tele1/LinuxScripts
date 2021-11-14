@@ -4,19 +4,23 @@
 # License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
 #============================================================================{
 
-NC='\e[0m'    # Reset Color
-BL='\e[0;36m' # Cyan ECHO
-GN='\e[0;32m' # Green ECHO
-YW='\e[0;33m' # Yellow ECHO
-RD='\e[0;31m' # Red ECHO
+# ON / OFF
+DEBUG_1="OFF"
+DEBUG_2="OFF"
 
-GREEN_ECHO() {
-    echo -e "${GN}${1}${NC}"
+
+DEBUG_1()
+{
+    if [[ "$DEBUG_1" == "ON" ]] ; then
+        echo -e "	${YW} DEBUG: $1 ${NC}"
+    fi
 }
 
-YELLOW_ECHO() {
-    echo -e "${YW}${1}${NC}"
+DEBUG_2()
+{
+    if [[ "$DEBUG_2" == "ON" ]] ; then
+        echo "$1"
+    fi
 }
-
 
 #============================================================================}

@@ -3,7 +3,7 @@
 
 # Developed for Linux
 # License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Version 8
+# Version 9
 # Destiny: Network connection statistics 
 # Script usage: bash script --help
 
@@ -24,6 +24,7 @@ source lib/lib.pstree
 source lib/lib.comm
 source lib/lib.netmonit.help
 source lib/lib.short
+source lib/lib.debug
 
 
 #======================================================{
@@ -31,11 +32,10 @@ LEVEL11() {
 while (($#)) ; do
 	#echo "loop = $# "
 	case "$1" in
-	--shorten) V_SHORTEN=1 ;
-	;;
+	--shorten) V_SHORTEN=1     ;;
 	--loop-sleep) V_LOOP_S=2   ;;
 	--loop-ip)    V_LOOP_IP=2  ;;
-	# In loop, it only displays when there are new connections 
+	# --loop-sleep-only-new --> It only displays when there are new connections 
 	--loop-sleep-only-new) V_LOOP_S=2 ;  V_SHORTEN=1 ; V_NEW=1 ;;
 	--catch)  V_CATCH=3  ; shift ; 
 
@@ -50,8 +50,6 @@ while (($#)) ; do
 				echo "Available arguments: "
 				echo "	pid" 
 				echo "	name" 
-				echo "	first-pid" 
-				echo "	first-name" 
 				exit ;;
 		esac
 		shift
@@ -62,7 +60,8 @@ while (($#)) ; do
 	--catch-all-new) CATCH=all-new ; NAME="$2" ;;
 	--ps-tree) TREE=1 ;;
 	--my-tree) TREE=2 ;;
-	--log-all)   V_LOG=4 ;;
+	--my-tree-full) TREE=2 ; TREE_FULL=1 ;;
+	--log-all) V_LOG=4 ;;
 	#--log-only-new)   V_LOG=5 ;;
 	*) echo "Error: Wrong argument: $1 "  ; exit ;;
 	esac
@@ -72,8 +71,8 @@ done
 #[[ $V_SHORTEN == 1 ]] && { [[ -z "$WAY" ]] && { echo "Error:  variable WAY is empty" ; exit 1 ;} ;}
 
 
-echo "--loop = $V_SLEEP ; --shorten = $V_SHORTEN;  ; --catch... V_CATCH= $V_CATCH -> $CATCH $NAME ; V_LOG = $V_LOG ; --tree = $TREE"
-echo =====================================
+DEBUG_1 "--loop = $V_SLEEP ; --shorten = $V_SHORTEN;  ; --catch... V_CATCH= $V_CATCH -> $CATCH $NAME ; V_LOG = $V_LOG ; --tree = $TREE"
+DEBUG_1 =====================================
 
 
 
@@ -113,22 +112,17 @@ fi
 
 #============================================={
 case $1 in
-	"--my-tree")
-		PID="$2"
-		TREE=2
-		# Part of lib/lib.short
+	--my-tree) PID="$2" ; TREE=2
+		# F.TREE is part of lib/lib.short
 		F.TREE
 		echo "$PROC_PSTREE_OUT"
 	;;
-	"--ps-tree") pstree -ptsa "$2" ;;
-	"--trees")
-		pstree -pa
-	;;
-	"--help"|"-h")
-		NETMONIT.HELP
-	;;
-	--display-log) echo "-display-log"  ; 
-					cat /var/log/netmonit.log
+	--my-tree-full) PID="$2" ; TREE=2 ; TREE_FULL=1 ; F.TREE ; echo "$PROC_PSTREE_OUT" ;;
+	--ps-tree)		pstree -ptsa "$2"  ;;
+	--trees)		pstree -pa         ;;
+	"--help"|"-h")		NETMONIT.HELP  ;;
+	--display-log)		echo "Log displayed:"  ; 
+						cat /var/log/netmonit.log
 	#---------------------------{
 	#	shift ; 
 	#	case "$1" in
@@ -159,8 +153,8 @@ case $1 in
 	#---------------------------}
 	#	exit 0
 	#;;
-	--remove-log)       rm -v  /var/log/netmonit.log     ; exit 0 ;;
 	--watch-log)      tail -f  /var/log/netmonit.log     ; exit 0 ;;
+	--remove-log)       rm -v  /var/log/netmonit.log     ; exit 0 ;;
 #====================
 	--lsof)    COMM="COMM.LSOF"    ; shift ; LEVEL11 "$@" ;;
 	--netstat) COMM="COMM.NETSTAT" ; shift ; LEVEL11 "$@" ;;

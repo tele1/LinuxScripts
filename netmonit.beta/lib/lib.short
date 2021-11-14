@@ -1,6 +1,9 @@
 #!/bin/bash
 
 
+# License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+
+
 COMMAND.IN.WHILE() {
 		if [[ "$V_SHORTEN" == 1 ]] ; then
 			if [[ "$V_NEW" == 1 ]] ; then
@@ -26,7 +29,6 @@ F.TREE() {
 	elif [[ "$TREE" == 2 ]] ; then
 		## Variable "$PS_TREE" is needed for function PROC.OF.PSTREE_2
 		PS_TREE=$(pstree -paAt)
-		echo "	Warning: This function is broken for now."
 		PROC.OF.PSTREE_2 "$PID"
 	else
 		PROC_PSTREE_OUT=$(pstree -ptsa "$PID")
@@ -49,6 +51,7 @@ F.CATCH.ALL.NEW() {
 				while read LINE ; do
 					#	if LINE is number
 					if [ "$LINE" -eq "$LINE" ] 2>/dev/null ; then
+						SHOW.OR.LOG " "
 						SHOW.OR.LOG "--------------------{"
 						SHOW.OR.LOG "$DATE_LOG ; PID = $LINE"
 						SHOW.OR.LOG "-----------"

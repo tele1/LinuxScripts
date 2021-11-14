@@ -1,8 +1,7 @@
 #!/bin/bash
 
 
-##	 Usefull own filter of pstree if you want have exit status from pstree (part of psmisc 23.3-1)
-
+# License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
 
 #============================================================================{
 PROC.OF.PSTREE_2() {
@@ -29,137 +28,69 @@ while IFS=',' read -r COLUMNS_AND_NAME  PID_AND_ARGUMENTS ; do
 	if [[ "$OLD_NUMBER_CHARS" -eq "0" ]] ; then
 		OLD_NUMBER_CHARS="1" 
 		TAB_ABOVE[$KOLUMN]="$LINE"
-		DEBUG " First line saved"
+		DEBUG_1 " First line saved"
 	elif [[ "$BREAK" == "0" ]] ; then
 		# divide "$COLUMNS_AND_NAME"
 		while IFS='-' read -r SOME_CHARS  PROCESS_NAME ; do
 			NUMBER_CHARS="${#SOME_CHARS}"
 
 			# For Debug
-			echo " "
-			echo '=========={'
-			echo "LINE:$LINE"
-			echo "NUMBER_CHARS = $NUMBER_CHARS ; OLD_NUMBER_CHARS = $OLD_NUMBER_CHARS"
+			#DEBUG_2 " "
+			#DEBUG_2 '=========={'
+			#DEBUG_2 "LINE:$LINE"
+			#DEBUG_2 "NUMBER_CHARS = $NUMBER_CHARS ; OLD_NUMBER_CHARS = $OLD_NUMBER_CHARS"
 		
 			# if next tree
 			if [[ "$NUMBER_CHARS" -gt "$OLD_NUMBER_CHARS" ]] ; then
 				KOLUMN="$[$KOLUMN + 1]"
 				TAB3[$KOLUMN]="$NUMBER_CHARS"  ;
 				TAB_ABOVE[$KOLUMN]="$LINE"  ;
-				DEBUG " This line gt than saved ; KOLUMN = $KOLUMN"
-					echo "---- Tab Above ----"
-					printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}}"
-					echo "-------------------"
+				DEBUG_1 " This line gt than saved ; Line saved to KOLUMN = $KOLUMN"
+					#DEBUG_2 "---- Tab Above ----"
+					#printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}}"
+					#DEBUG_2 "-------------------"
 
 			# if the same tree
 			elif [[ "$NUMBER_CHARS" -eq "$OLD_NUMBER_CHARS" ]] ; then
 				KOLUMN="$KOLUMN"
 				TAB3[$KOLUMN]="$NUMBER_CHARS"
 				TAB_ABOVE[$KOLUMN]="$LINE"  ;
-				DEBUG "	This line eq than saved ; KOLUMN = $KOLUMN"
-					echo "---- Tab Above ----"
-					printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}}"
-					echo "-------------------"
+				DEBUG_1 "	This line eq than saved ; Line saved to KOLUMN = $KOLUMN"
+					#DEBUG_2 "---- Tab Above ----"
+					#printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}}"
+					#DEBUG_2 "-------------------"
 
 			# if one of the earlier tree
 			elif [[ "$NUMBER_CHARS" -lt "$OLD_NUMBER_CHARS" ]] ; then
-				DEBUG "	This line lt than saved ; KOLUMN = $KOLUMN"
+				DEBUG_1 "	This line lt than saved "
 
-				echo "TAB3 before TAB3_NUMBER for loop: ${TAB3[@]}"
-				echo "We will remove lines earlier, bigger than "$NUMBER_CHARS""
+				#$DEBUG_2 "TAB3 before TAB3_NUMBER for loop: ${TAB3[@]}"
+				#$DEBUG_2 "We will remove lines earlier, bigger than "$NUMBER_CHARS""
 				COUNT_LOCAL=1
 				for TAB3_NUMBER in "${TAB3[@]}" ; do
 
-
-
 					if   [[ "$NUMBER_CHARS" -eq "$TAB3_NUMBER" ]] ; then
-						DEBUG "	: "$NUMBER_CHARS" = "$TAB3_NUMBER". Line skipped."
-#						KOLUMN="$COUNT_LOCAL"
-#						TAB3[$KOLUMN]="$NUMBER_CHARS"
-##						TAB_ABOVE[$KOLUMN]="$LINE" 
-#							echo "---- Tab Above in for loop ----"
-#							printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}"
-#							echo "-------------------------------"
-
-
-#							DEBUG "Remove lines () bigger than this kolumn $KOLUMN to ${#TAB3[@]}"
-#							TO_REMOVE_COUNT="$[$KOLUMN+1]"
-#							while [ "$TO_REMOVE_COUNT" -le "${#TAB3[@]}" ] ; do
-#								#echo $TO_REMOVE_COUNT
-#								unset TAB3[$TO_REMOVE_COUNT]
-#								unset TAB_ABOVE[$TO_REMOVE_COUNT]
-#								TO_REMOVE_COUNT="$[$TO_REMOVE_COUNT+1]"
-#							done
-
-#								echo "---- Tab Above in for loop after remove ----"
-#								printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}}"
-#								echo "--------------------------------------------"
-
-							#break
+						DEBUG_1 "	: "$NUMBER_CHARS" = "$TAB3_NUMBER". Line saved to KOLUMN "$COUNT_LOCAL". "
+						KOLUMN="$COUNT_LOCAL"
+						TAB3[$KOLUMN]="$NUMBER_CHARS"
+						TAB_ABOVE[$KOLUMN]="$LINE" 
 
 					elif [[ "$NUMBER_CHARS" -gt "$TAB3_NUMBER" ]] ; then
-						DEBUG "	: "$NUMBER_CHARS" > "$TAB3_NUMBER". Line removed"
-#						KOLUMN="$COUNT_LOCAL"
-#						TAB3[$KOLUMN]="$NUMBER_CHARS"
-#						TAB_ABOVE[$KOLUMN]="$LINE" 
-#							echo "---- Tab Above in for loop ----"
-#							printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}"
-#							echo "-------------------------------"
-
-#							DEBUG "Remove lines () bigger than this kolumn $KOLUMN to ${#TAB3[@]}"
-#							TO_REMOVE_COUNT="$[$KOLUMN+1]"
-
-						# KOLUMN="$COUNT_LOCAL"
-						unset TAB3[$COUNT_LOCAL]
-						unset TAB_ABOVE[$COUNT_LOCAL]
+						DEBUG_1 "	: "$NUMBER_CHARS" > "$TAB3_NUMBER". KOLUMN "$COUNT_LOCAL" skipped. "
 
 					elif [[ "$NUMBER_CHARS" -lt "$TAB3_NUMBER" ]] ; then
-						DEBUG "	: "$NUMBER_CHARS" < "$TAB3_NUMBER". Line skipped "
-						#continue
+						DEBUG_1 "	: "$NUMBER_CHARS" < "$TAB3_NUMBER".  KOLUMN "$COUNT_LOCAL" removed. "
+						unset TAB3[$COUNT_LOCAL]
+						unset TAB_ABOVE[$COUNT_LOCAL]
 					fi
 
 					COUNT_LOCAL=$[$COUNT_LOCAL + 1]
-#					echo "TAB3_NUMBER=$TAB3_NUMBER"
-#					echo "COUNT_LOCAL=$COUNT_LOCAL"
-#
 				done
-					echo "---- Tab Above ----"
-					printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}}"
-					echo "-------------------"
-#DEBUG "Other"
-				#KOLUMN=$COUNT_LOCAL
-				#TAB3[$KOLUMN]="$NUMBER_CHARS"
-				#TAB_ABOVE[$KOLUMN]="$LINE"  ;
 
-				#echo "=========={ Before loop while NUMBER_M: $[$COUNT_LOCAL + 1] ; ${#TAB3[@]}"
-				#echo "=========="
-				#printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}"
-				#echo "==========}"
-
-				#echo " BEFORE NUMBER_M: $[$COUNT_LOCAL + 1] ; ${#TAB3[@]} "
-
-				# Remove older from TAB3
-				##	 We need use while loop instead for loop + seq ( because it can be interpreted with and without quotation marks )
-				#for M in  $( seq $[$COUNT_LOCAL + 1] ${#TAB3[@]} ) ; do
-				#NUMBER_M="$COUNT_LOCAL"
-				#while [ $NUMBER_M -le ${#TAB3[@]} ] ; do
-					## For Debug
-				#	if [[ $(wc -l <<< "$NUMBER_M") -gt 1 ]] ;then
-				#		echo "Error: element NUMBER_M have more lines than 1."
-				#		echo "Debugging: NUMBER_M = $NUMBER_M"
-				#	fi
-
-					##	remove from TAB3
-				#	unset TAB3[$NUMBER_M]
-				#	unset TAB_ABOVE[$NUMBER_M]
-
-					## refresh counting 
-				#	NUMBER_M=$[$NUMBER_M+1]
-				#done
-
-				#echo "==== After loop while NUMBER_M ===={"
-				#printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}"
-				#echo "====================}"
+				#DEBUG_2 "---- Tab Above ----"
+				#printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}}"
+				#DEBUG_2 "-------------------"
+				#DEBUG_2 "TAB3 after for loop: ${TAB3[@]}"
 			fi
 
 			OLD_NUMBER_CHARS="$NUMBER_CHARS"
@@ -168,7 +99,6 @@ while IFS=',' read -r COLUMNS_AND_NAME  PID_AND_ARGUMENTS ; do
 
 
 	##	== Part Center of lines ==
-	#F.PART.CENTER
 	while IFS=' ' read -r PID_LINE OPTIONS ; do
 		#echo "PID_LINE = $PID_LINE"
 		if [[ "$PID_LINE" -eq "$PID" ]] ; then
@@ -193,7 +123,6 @@ while IFS=',' read -r COLUMNS_AND_NAME  PID_AND_ARGUMENTS ; do
 	fi
 
 	##	== Part Below of lines ==
-	#F.PART.BELOW
 	if [[ "$BREAK" == "2" ]] ; then
 
 				# For Debug: tree signs have been replaced with the number of these characters
@@ -230,8 +159,11 @@ done <<< "$PS_TREE"
 #echo "==========}"
 
 if [ ! -z "${PART_CENTER}" ] ; then
-	#PROC_PSTREE_OUT=$(printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}" "${PART_CENTER}" "${PART_BELOW[@]}")
-	PROC_PSTREE_OUT=$(printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}" "${PART_CENTER}")
+	if [[ "$TREE_FULL" == 1 ]] ; then
+		PROC_PSTREE_OUT=$(printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}" "${PART_CENTER}" "${PART_BELOW[@]}")
+	else
+		PROC_PSTREE_OUT=$(printf "%s\n" "${TAB_ABOVE[@]::${#TAB_ABOVE[@]}-1}" "${PART_CENTER}")
+	fi
 
 	##	DEBUG:
 	#echo "== PROC_PSTREE_OUT =={"
@@ -240,7 +172,7 @@ if [ ! -z "${PART_CENTER}" ] ; then
 fi
 
 if [ -z "$PROC_PSTREE_OUT" ] ; then 
-	echo "Error: variable PROC_PSTREE_OUT is empty." ;
+	echo "Error: variable PROC_PSTREE_OUT is empty. PID not found in side output of pstree command." ;
 	echo "PID = $PID"
 fi
 }

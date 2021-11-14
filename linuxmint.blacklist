@@ -194,8 +194,16 @@ update-manager-core
 ubuntu-release-upgrader-gtk
 update-notifier
 update-notifier-common
+hw-probe
 '
 
+## related to the internet:
+#network-manager-config-connectivity-ubuntu
+#apport
+#update-notifier
+#		python3-popcon  ?		https://popcon.ubuntu.com/
+#popularity-contest
+#hw-probe		https://linux-hardware.org/
 
 ###########################}
 # Check Dependecies - List is not created automatically
