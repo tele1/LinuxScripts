@@ -1,0 +1,125 @@
+#!/bin/bash
+
+
+DESTINY="This script can convert decimal number to unicode char."
+VERSION="1"
+LICENCE="GPL v3: https://www.gnu.org/licenses/gpl.html "
+LC_ALL=C 
+
+
+##============{
+NOTE_BEGIN() {
+echo "----------------------"
+echo "Decimal	Unicode	char"
+echo "----------------------"
+}
+##============}
+
+##===================={
+NOTE_ABOUT_THE_END() {
+	echo " "
+	echo "The end of script."
+	if [ -f /usr/share/tuxtype/sounds/win.wav ] ; then
+		##  Play sound :)
+		aplay /usr/share/tuxtype/sounds/win.wav > /dev/null 2>&1
+	fi
+}
+##====================}
+
+##============================{
+PRINT() {
+
+while  [ "$NUMBER_STARTING" -le "$NUMBER_ENDING" ] ; do
+
+	## Example:
+	## Decimal 616 to unicode \u268 . Info: Decimal number this is for me number of character (0-65536)
+	#	A="$(printf '\\u%x\n' '616')"
+	## Unicode to char
+	#	bash -c "printf '$A\n'"
+
+	VARIABLE="$(printf '\\u%x\n' $NUMBER_STARTING)"
+	bash -c "printf '$NUMBER_STARTING	%s	%b\n' '$VARIABLE' '$VARIABLE'"
+
+	# It is for "while loop"
+	NUMBER_STARTING=$[$NUMBER_STARTING+1]
+done
+
+}
+##============================}
+
+
+case "$1" in
+	"--utf"|"-u")
+#		echo "$1 $2 $3"
+		[ -z $2 ] && { echo "Second argumentis empty. Enter a starting number. " ; exit 1 ;} 
+		[ -z $3 ] && { echo "Third  argumentis empty. Enter a ending number. " ; exit 1 ;}
+		NOTE_BEGIN
+		NUMBER_STARTING="$2" ; NUMBER_ENDING="$3" ; PRINT
+		NOTE_ABOUT_THE_END
+	;;
+	"--stdin"|"-s")
+		if [[ -p /dev/stdin ]] ; then
+    		PIPE=$(cat -)
+    		VARIABLE="$(printf '\\u%x\n' $PIPE)"
+			bash -c "printf '%b\n' '$VARIABLE'"
+		fi
+	;;
+	"--help"|"-h")
+		echo "---------------------------------------------------------"
+		echo "usage: $0 --option"
+		echo " "
+		echo " "
+		echo " Main options:"
+		echo " "
+		echo "   --stdin               -s     This change decimal number to char"
+		echo "                                from stdin using pipe"
+		echo " "
+		echo "                                For example:"
+		echo " 				==========================="
+		echo " 				$ echo 120 | bash utf.script -s"
+		echo " 				x"
+		echo " 				==========================="
+		echo " "
+		echo "   --utf                 -u     Utf-8 (~ 0-65535 0-65536)"
+		echo "                                At the end this option, add starting number"
+		echo "                                and add ending number."
+		echo " "
+		echo "                                For example:"
+		echo " 				==========================="
+		echo " 				$ bash utf.script -u 610 615"
+		echo " 				----------------------"
+		echo " 				Decimal	Unicode	char"
+		echo " 				----------------------"
+		echo " 				610	\u262	ɢ"
+		echo " 				611	\u263	ɣ"
+		echo " 				612	\u264	ɤ"
+		echo " 				613	\u265	ɥ"
+		echo " 				614	\u266	ɦ"
+		echo " 				615	\u267	ɧ"
+ 		echo " "
+		echo " 				The end of script."
+		echo " 				==========================="
+		echo " "
+		echo " 				Info:"
+		echo " 				1. Unicode    https://en.wikipedia.org/wiki/List_of_Unicode_characters"
+		echo " 				2. Unicode    https://www.utf8-chartable.de/"
+		echo " 				3. ASCII      https://en.wikipedia.org/wiki/ASCII#Control_code_chart"
+		echo " "
+		echo "   --help                -h     Show help"
+		echo " "
+		echo "---------------------------------------------------------"
+		exit
+	;;
+	*)
+		echo "	Error: unknown option"		
+		echo "	Try use: $0 --help"
+		exit
+	;;
+esac
+
+exit
+
+
+
+
+

@@ -1,0 +1,111 @@
+#!/bin/bash
+
+
+DESTINY=" Script designed to create ascii characters between chars A and B."
+VERSION="3"
+LICENCE="GPL v3: https://www.gnu.org/licenses/gpl.html "
+LC_ALL=C 
+
+
+##===================={
+NOTE_ABOUT_THE_END() {
+	echo " "
+	echo "The end of script."
+	if [ -f /usr/share/tuxtype/sounds/win.wav ] ; then
+		##  Play sound :)
+		aplay /usr/share/tuxtype/sounds/win.wav > /dev/null 2>&1
+	fi
+}
+##====================}
+
+##============================{
+#PRINT() {
+
+#while  [ "$NUMBER_STARTING" -le "$NUMBER_ENDING" ] ; do
+#	printf "%s" "NUMBER_STARTING = $NUMBER_STARTING ; "
+	##	Print number decimal to hex
+#	DEC_NUM=$(printf "%x" "$NUMBER_STARTING")
+#	WC=$(wc -m <<< "$DEC_NUM")
+
+#	if [ "$WC" -eq 2 ] ; then
+#		DEC_NUM="0${DEC_NUM}"
+#	fi
+
+	##	Print text + hex char + text
+#	printf  "A\x${DEC_NUM}B\n" | tee -a file.with.ascii.characters
+
+#	NUMBER_STARTING=$[$NUMBER_STARTING+1]
+#done
+
+#}
+
+PRINT() {
+	printf "A%bB\n" $(printf '\\x%x\n' $(seq $NUMBER_STARTING $NUMBER_ENDING))
+}
+##============================}
+
+
+case "$1" in
+	"--control"|"-c")
+		NUMBER_STARTING=0 ; NUMBER_ENDING=31 ; PRINT ; NUMBER_STARTING=127 ; NUMBER_ENDING=127 ; PRINT
+		NOTE_ABOUT_THE_END
+	;;
+	"--printable"|"-p")
+		NUMBER_STARTING=32 ; NUMBER_ENDING=126 ; PRINT
+		NOTE_ABOUT_THE_END
+	;;
+	"--extended"|"-e")
+		CLEAR_FILE
+		NUMBER_STARTING=128 ; NUMBER_ENDING=255 ; PRINT
+		NOTE_ABOUT_THE_END
+	;;
+	"--all"|"-a")
+		NUMBER_STARTING=0 ; NUMBER_ENDING=255 ; PRINT
+		NOTE_ABOUT_THE_END
+	;;
+	"--help"|"-h")
+		echo "---------------------------------------------------------"
+		echo " "
+		echo " $DESTINY"
+		echo " "
+		echo "usage: $0 --option"
+		echo " "
+		echo " "
+		echo " Main:"
+		echo " "
+		echo "   --control             -c     Display control ASCII characters (0-31 + 127)"
+		echo " "
+		echo "   --printable           -p     Display printable ASCII characters (32-126)"
+		echo "                                Note:"
+		echo "                                32 -space. Space has a dual nature."
+		echo "                                It can be classified as both a control ascii character"
+		echo "                                and a (non-printing) graphic character."
+		echo " "
+		echo "   --extended            -e     Display the extended ASCII characters (128-255)"
+		echo " "
+		echo "   --all                 -a     Display  all ASCII characters (0-255)"
+		echo " "
+		echo "   --help                -h     Show help"
+		echo " "
+		echo "---------------------------------------------------------"
+		echo " "
+		echo " Useful sources:"
+		echo " 1. Control characters   https://www.aivosto.com/articles/control-characters.html"
+		echo " 2. ASCII table          https://computersciencewiki.org/images/3/3d/Ascii_table.png"
+		echo " 3. ASCII table          https://en.wikipedia.org/wiki/ASCII#Control_code_chart"
+		echo "---------------------------------------------------------"
+		exit
+	;;
+	*)
+		echo "	Error: unknown option"		
+		echo "	Try use: $0 --help"
+		exit
+	;;
+esac
+
+exit
+
+
+
+
+
