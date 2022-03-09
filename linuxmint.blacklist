@@ -5,7 +5,7 @@
 # For own use.
 
 # License:		GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Version		2
+# Version		3
 # Destiny:		Script to check whether unnecessary packages are installed.
 #               The package list is created to my needs. 
 #			    I am not responsible for other people's needs.
@@ -195,6 +195,7 @@ ubuntu-release-upgrader-gtk
 update-notifier
 update-notifier-common
 hw-probe
+geoclue-2.0
 '
 
 ## related to the internet:

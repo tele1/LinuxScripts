@@ -1,0 +1,121 @@
+#!/bin/bash
+
+
+# Developed for Linux
+# License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+# Version 1
+# Destiny: Switcher for CPU frequency scaling governors  ( for gamers )
+# Script usage: bash script --help
+
+##--------------------------------------{
+##	Better solutions than this script 
+##		1. Plug-in " monitor CPU frequency " in side Mate desktop. 
+##		2. " cpupower-gui " app 
+##		3. Example Alias
+##		###########################{
+##		CPU_WAKE_UP(){
+##		echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+##		}
+##
+##		CPU_SLEEP() {
+##		echo powersave | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+##		}
+##
+##		alias cpu.up='CPU_WAKE_UP'
+##		alias cpu.down='CPU_SLEEP'
+##		alias cpu.status='cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor'
+##		###########################}
+##				To refresh:		 source ~/.bashrc
+##				unlock: 		chattr -i .bashrc
+##				lock:		chattr +i .bashrc
+##--------------------------------------}
+
+
+## Doc:
+##		http://dcjtech.info/topic/cpu-frequency-scaling-governors/
+##		https://www.kernel.org/doc/html/v5.0/admin-guide/pm/cpufreq.html
+
+
+#####	VARIABLES	########## {
+
+PATH_CPU_POWER="$HOME/.config/cpu.power"
+
+##	STATUS_CPU ( variable ) Only first Line
+read -r STATUS_CPU < /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+
+STATUS_ICON=$(readlink link.svg)
+############################ }
+
+
+#####	FUNCTIONS	################################ {
+
+LIST_GOVERNORS() {
+##	Only for one policy
+cat /sys/devices/system/cpu/cpufreq/policy0/scaling_available_governors 
+}
+
+SET_PERFORMANCE() {
+##	"pkexec" instead "sudo"
+echo performance | pkexec tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+}
+
+SET_POWERSAVE() {
+echo powersave | pkexec tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+}
+
+REFRESH_LINK() {
+if [[ ! $STATUS_CPU == $STATUS_ICON ]] ; then
+	if [[ $STATUS_CPU == performance ]] ; then ln -fs $PATH_CPU_POWER/weather-clear-symbolic.svg link.svg  ; fi
+	if [[ $STATUS_CPU == powersave   ]] ; then ln -fs $PATH_CPU_POWER/weather-clear-night-symbolic.svg link.svg  ; fi
+fi
+}
+
+SWITCH() {
+	#if [[ $STATUS_CPU == performance ]] ; then SET_POWERSAVE ; REFRESH_LINK ; fi
+	#if [[ $STATUS_CPU == powersave   ]] ; then SET_PERFORMANCE ; REFRESH_LINK ;fi
+	if [[ $STATUS_CPU == performance ]] ; then SET_POWERSAVE ;   fi
+	if [[ $STATUS_CPU == powersave   ]] ; then SET_PERFORMANCE ; fi
+
+	DATA_1=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)
+	#DATA_2=$(basename $(readlink link.svg))
+
+	#zenity --no-wrap --info --text "$DATA_1 \n $DATA_2"
+	zenity --no-wrap --info --text "$DATA_1"  
+	
+}
+#################################################### }
+
+
+case "$1" in
+    "--help"|"-h")
+		echo "---------------------------------------------------------"
+		echo " Switcher for CPU frequency scaling governors  "
+		echo " "
+		echo " "
+		echo " Options:"
+		echo "   -l  --list         List available scalable governors"
+		echo " "
+		echo "   -r  --refresh      ( Not working for now ) Refresh link icon. Add command with this option on computer startup. "
+		echo "                      Example for cron:	@reboot      sleep 10 && cpu.sh -r   "
+		echo " "
+		echo "   -s  --switch       Switches from powersave to performance and vice versa "
+		echo " "
+		echo "   -h  --help         Show this help."
+		echo "---------------------------------------------------------"
+		exit 0
+    ;;
+	"-l"|"--list")
+		LIST_GOVERNORS
+	;;
+	"-r"|"--refresh")
+		echo "Option is off" ; exit
+		REFRESH_LINK
+	;;
+	"-s"|"--switch")
+		SWITCH
+	;;
+	*)
+		echo "Invalid option. "
+		echo "For more info write $0 --help "
+	;;
+esac

@@ -1,0 +1,490 @@
+#!/bin/bash
+
+
+# Licence: GNU GPL v3  https://www.gnu.org/licenses/gpl-3.0.html
+  VERSION="2"
+  SOURCE="https://github.com/tele1/LinuxScripts"
+# Destiny:      Attempted to summarize the value of RAM used
+# Script use:	bash mem --help
+
+
+###########################}
+# Check Dependecies - List created automatically by find.bash.dep.sh version=8 
+# source=https://github.com/tele1/LinuxScripts
+[[ -z $(type -P awk) ]] && DEP="$DEP"$'\n'"awk"
+[[ -z $(type -P cut) ]] && DEP="$DEP"$'\n'"cut"
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P ps) ]] && DEP="$DEP"$'\n'"ps"
+[[ -z $(type -P top) ]] && DEP="$DEP"$'\n'"top"
+[[ -z $(type -P tr) ]] && DEP="$DEP"$'\n'"tr"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+###########################}
+
+
+##  Dictionary: 
+##  F_NAME - function name
+##  F_NAME_L_NAME - function name from library / file name
+##  $[..] is replaced via $((..))
+
+LC_ALL=C
+# For DEBUG available options: ON , OFF
+DEBUG=OFF
+
+NC='\e[0m'    # Reset Color
+BL='\e[0;36m' # Cyan ECHO
+GN='\e[0;32m' # Green ECHO
+YW='\e[0;33m' # Yellow ECHO
+RD='\e[0;31m' # Red ECHO
+
+#----------------{
+F_MESSAGE_ERROR() {
+    # print text in red and redirect to error
+	echo -e "${RD}  ERROR: $@ ${NC}" 1>&2
+    #; exit 1
+}
+#----------------}
+
+#----------------{
+F_MESSAGE_DEBUG() {
+    if [[ "$DEBUG" == "ON" ]] ; then
+        echo -e "${BL}  DEBUG: $1 ${NC}"
+    fi
+}
+#----------------}
+
+#----------------{
+F_MESSAGE_DEBUG2() {
+    if [[ "$DEBUG" == "ON" ]] ; then
+        echo -e "${GN}  DEBUG: $1 ${NC}"
+    fi
+}
+#----------------}
+
+#====================================================================================================
+
+#================================{
+F_FOREST() {
+ps -xo pid,size,command --forest
+}
+#================================}
+
+#================={
+F_COUNT_CHARACTERS() {
+# break one line into characters
+# I want to calculate how far the command is. From the beginning of the line to the command 
+	COUNT_CHAR=0
+while IFS= read -r -d "" -n 1 CHAR; do
+	#echo "$CHAR"
+
+	##  if this is part of a command then end this loop 
+	case "$CHAR" in 
+	"/")       break ;;
+	[a-zA-Z])  break ;; esac
+
+	SAVE_COUNT_CHAR="$COUNT_CHAR"
+	COUNT_CHAR=$(($COUNT_CHAR+1))
+done <<< $1
+}
+#=================}
+
+
+#================={
+F_TOTAL_USED() {
+
+## I used "free" command because probably the full data the command "ps" will show with root privileges.
+
+	NUM=0
+while read A B C D; do
+	while read LINE; do
+		NUM=$(($NUM+1))
+		F_MESSAGE_DEBUG "NUM = $NUM"
+		F_MESSAGE_DEBUG "LINE = $LINE"
+		[ $NUM -eq 2 ] && TOTAL_USED="$LINE"
+	done <<< "$C"
+done <<< "$(free -m)"
+}
+#=================}
+
+#============================================{
+F_PS_GROUP() {
+F_MESSAGE_DEBUG2 "PID: $1"
+
+##  Tree of all processes 
+TREE_1=$(ps -xo pid,rss,command --forest --no-headers)
+
+
+## Example about RSS https://askingthelot.com/what-is-rss-in-ps-output/
+
+
+##  A loop which will find the specified process + find its process tree
+##  and it will return a list of these processes together.
+IFS=" " ;  while read A B C ; do
+
+	# Find line containing specific PID 
+	if [[ "${A}" == "${1}" ]] ; then 
+		DATA="$A $B $C"
+
+		# START list of processes from this line
+		START_P1=START
+
+		##  Command distance from F_COUNT_CHARACTERS
+		F_COUNT_CHARACTERS "$C"
+		COUNT_FIRST_LINE="$SAVE_COUNT_CHAR"
+
+		F_MESSAGE_DEBUG2 "$A $B $C"
+		F_MESSAGE_DEBUG "COUNT_FIRST_LINE = $COUNT_FIRST_LINE"
+		RSS="$B"
+		COMMAND=$(cut -c $(($COUNT_FIRST_LINE+1))- <<< $C)
+		PROCESS_COUNTER=1
+		continue
+	fi
+
+
+	if [[ "${START_P1}" == "START" ]] ; then 
+
+		##  Command distance from F_COUNT_CHARACTERS
+		F_COUNT_CHARACTERS "$C"
+		COUNT_NEXT_LINE="$SAVE_COUNT_CHAR"
+
+		F_MESSAGE_DEBUG "COUNT_NEXT_LINE = $COUNT_NEXT_LINE"
+
+		# STOP loop and also list
+		[ "$COUNT_NEXT_LINE" -le "$COUNT_FIRST_LINE" ] && break
+
+		# The sum of all processes (RSS)
+				# If "SUM" is empty then put the first number from first line. 
+				[ -z "$SUM" ] && SUM="$RSS"
+		SUM=$(($B+$SUM))
+		
+		F_MESSAGE_DEBUG "B = $B"
+		F_MESSAGE_DEBUG "SUM = $SUM"
+		PROCESS_COUNTER=$((PROCESS_COUNTER+1))
+	fi
+
+
+	## Count only to 10 . THIS IS ONLY temporarily for test / debug "break" commmand.
+	## [ -z "$N" ] && N=1 ; [ $N -eq 10 ] && break ; N=$(($N+1)) 
+done <<< "$TREE_1"
+
+[ -z "$DATA" ] && { F_MESSAGE_ERROR "not found PID: $1 " ; exit 1;}
+
+echo  "  Command = $COMMAND"
+echo  "  RSS = $(("$SUM"/1024)) MiB (Number of processes: $PROCESS_COUNTER)"
+
+# Total used
+F_TOTAL_USED ; echo "  TOTAL_USED = $TOTAL_USED MiB (from free command)"
+}
+#============================================}
+
+
+#========={
+F_PS_SINGLE() {
+	LINE=$(ps -o rss,command -p "$1" --no-headers)
+	[ -z "$LINE" ] && { F_MESSAGE_ERROR "not found PID: $1 " ; exit 1;}
+
+while read RSS COMMAND ; do
+echo  "  Command = $COMMAND"
+echo  "  RSS = $(("$RSS"/1024)) MiB"
+done <<< "$LINE"
+
+# Total used
+F_TOTAL_USED ; echo "  TOTAL_USED = $TOTAL_USED MiB (from free command)"
+}
+#=========}
+
+
+#========={
+F_TOP_SINGLE() {
+TOP_WINDOW=$(top -wbn 1)
+
+COUNT=0 ; IFS=" " ;  while read ONE TWO TREE FOUR FIVE SIX SEVEN EIGHT NINE TEN ELEVEN TWELVE ; do
+	COUNT=$(($COUNT+1))
+
+	# to get total used memory
+	# if there is a fourth row 
+	if [ "${COUNT}" -eq "4" ] ; then 
+		TOTAL_USED="$EIGHT MiB"
+	fi
+
+	# to get list of PID,RES,COMMAND
+	if [ "${COUNT}" -gt "7" ] ; then 
+
+		# Find line containing specific PID 
+		if [[ "${ONE}" == "${1}" ]] ; then 
+			echo "  COMMAND = $TWELVE"
+			echo "  REZ = ${SIX}" 
+		fi
+	fi
+done <<< "$TOP_WINDOW"
+
+
+echo "  TOTAL_USED = $TOTAL_USED (from top command)" 
+}
+#=========}
+
+
+#============================================{
+F_TOP_GROUP() {
+
+TOP_WINDOW=$(top -wbn 1)
+
+
+# get a list of PID-s of processes from the process tree 
+# I will usee "ps" command for this job. Because I don't see the possibility of using "top" command.
+TREE_1=$(ps -xo pid,command --forest --no-headers)
+
+# parse "ps" output
+IFS=" " ;  while read PID COMMAND ; do
+
+	# Find line containing specific PID 
+	if [[ "${PID}" == "${1}" ]] ; then 
+
+		# Start list of processes from this line (the list will only contain PID numbers)
+		START_P1=START
+
+		##  Command distance from F_COUNT_CHARACTERS
+		F_COUNT_CHARACTERS "$COMMAND"
+		COUNT_FIRST_LINE="$SAVE_COUNT_CHAR"
+
+		F_MESSAGE_DEBUG "COUNT_FIRST_LINE = $COUNT_FIRST_LINE"
+		FIRST_PID="${PID}"
+		PROCESS_COUNTER=1
+		continue
+	fi
+
+
+	if [[ "${START_P1}" == "START" ]] ; then 
+
+		##  Command distance from F_COUNT_CHARACTERS
+		F_COUNT_CHARACTERS "$COMMAND"
+		COUNT_NEXT_LINE="$SAVE_COUNT_CHAR"
+
+		F_MESSAGE_DEBUG "COUNT_NEXT_LINE = $COUNT_NEXT_LINE"
+
+		# STOP loop and also list
+		[ "$COUNT_NEXT_LINE" -le "$COUNT_FIRST_LINE" ] && break
+
+		# List of PID-s
+		[ -z "$LIST_PIDS" ] && LIST_PIDS="$FIRST_PID"
+		LIST_PIDS="$(printf "%s\n%s" "${LIST_PIDS}" "${PID}")"
+
+		PROCESS_COUNTER=$((PROCESS_COUNTER+1))
+	fi
+
+
+done <<< "$TREE_1"
+
+
+F_MESSAGE_DEBUG "PROCESS_COUNTER = $PROCESS_COUNTER"
+F_MESSAGE_DEBUG "LIST_PIDS = $LIST_PIDS"
+
+
+COUNT=0 ; IFS=" " ;  while read ONE TWO TREE FOUR FIVE SIX SEVEN EIGHT NINE TEN ELEVEN TWELVE ; do
+	COUNT=$(($COUNT+1))
+
+	# to get total used memory
+	# if there is a fourth row 
+	if [ "${COUNT}" -eq "4" ] ; then 
+		TOTAL_USED="$EIGHT MiB"
+	fi
+
+
+	# to get list of PID,RES,COMMAND
+	if [ "${COUNT}" -gt "7" ] ; then 
+
+		# Find line containing specific PID from $LIST_PIDS
+		while read LINE ; do
+
+			if [[ "${LINE}" == "${ONE}" ]] ; then 
+ 
+				REZ="$SIX"
+				F_MESSAGE_DEBUG "----"
+				F_MESSAGE_DEBUG "PID = $ONE"
+				F_MESSAGE_DEBUG "REZ = $REZ"
+				F_MESSAGE_DEBUG "COMMAND = $TWELVE"
+
+				#========={
+				# The REZ may contain numbers rounded to GiB :(
+				# break one line into characters
+				VALUE=0 ; while IFS= read -r -d "" -n 1 CHAR; do
+				case "$CHAR" in 
+					",") REZ=$(tr ',' '.' <<< "$REZ") ;;
+					"g") REZ=$(tr -d 'g' <<< "$REZ") ; REZ=$(awk '{N=$1*1024*1024 ; printf("%.f" , N)}' <<< "$REZ") ; break ;;
+					"m") REZ=$(tr -d 'm' <<< "$REZ") ; REZ=$(awk '{N=$1*1024 ; printf("%.f" , N)}' <<< "$REZ")  ; break ;;
+					[a-zA-Z]) VALUE=1 ; break ;; esac
+				done <<< "$REZ"
+
+
+				if [[ "${VALUE}" == "1" ]] ; then  
+					LIST_ALPHA_REZ="$( printf "%s\n%s" "${LIST_ALPHA_REZ}"  "${REZ}")"
+				else
+					#LIST_NUMBER_REZ="$(printf "%s\n%s" "${LIST_NUMBER_REZ}" "${REZ}")"
+					[ -z "$SUM" ] && SUM="$RSS"
+					SUM_NUMBER_REZ=$(($SUM_NUMBER_REZ+$REZ))
+				fi
+				#=========}
+
+			fi
+
+		done <<< "$LIST_PIDS"
+
+
+		if [[ "${ONE}" == "${1}" ]] ; then 
+			COMMAND="$TWELVE"
+		fi
+
+	fi
+
+done <<< "$TOP_WINDOW"
+
+F_MESSAGE_DEBUG "LIST_ALPHA_REZ = $LIST_ALPHA_REZ"
+F_MESSAGE_DEBUG "SUM_NUMBER_REZ = $SUM_NUMBER_REZ"
+
+echo "  Command = $COMMAND"
+echo "  REZ = $((SUM_NUMBER_REZ/1024)) MiB"
+
+if [ ! -z "$LIST_ALPHA_REZ" ] ; then
+	echo " "
+	echo "  Info: The value may contain additional characters, "
+	echo "        therefore additional values may be below. "
+	echo "        Try fix script."
+	echo " "
+	echo "        contains characters a-z = $LIST_ALPHA_REZ"
+	echo " "
+fi
+
+echo "  TOTAL_USED = $TOTAL_USED (from top command)"
+
+}
+#============================================}
+
+
+F_PS_MEM() {
+
+[[ ! -f "ps_mem.py" ]] && echo "Script not found in this directory: ps_mem.py"
+[[ -z $(type -P python) ]] && DEP="$DEP"$'\n'"python"
+[[ -z $(type -P sudo) ]] && DEP="$DEP"$'\n'"sudo"
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+
+OUTPUT=$(sudo python ps_mem.py)
+
+while read ONE TWO TREE FOUR FIVE SIX ; do
+
+	if [ -z "$ONE" ] ; then
+		# Start job from this line.
+		START_JOB=1
+		continue
+	fi 
+
+
+	if [[ "$START_JOB" == "1" ]] ; then 
+
+		# Stop job if "-" char is detected
+		while IFS= read -r -d "" -n 1 CHAR; do
+			case "$CHAR" in
+			"-") START_JOB=0 ; break ;; esac
+		done <<< "$ONE"
+
+
+		if [[ "$START_JOB" == "1" ]] ; then 
+			
+			# Change KiB,MiB,GiB to KiB and round to integers for "Private" column
+			while IFS= read -r -d "" -n 1 CHAR; do
+				case "$CHAR" in
+				"K") ONE=$(awk '{N=$1 ; printf("%.f" , N)}' <<< "$ONE") ; break ;; 
+				"M") ONE=$(awk '{N=$1*1024 ; printf("%.f" , N)}' <<< "$ONE") ; break ;; 
+				"G") ONE=$(awk '{N=$1*1024*1024 ; printf("%.f" , N)}' <<< "$ONE") ; break ;; 
+				"*") F_MESSAGE_ERROR "Unknown CHAR variable, try fix script."  ; exit 1 ;; esac
+			done <<< "$TWO"
+	
+#			F_MESSAGE_DEBUG "Private = $ONE"
+			[ -z "$SUM_ONE" ] && SUM_ONE=0
+			SUM_ONE="$((${SUM_ONE}+${ONE}))"
+#			F_MESSAGE_DEBUG "Sum = ${SUM_ONE}"
+
+
+			# Change KiB,MiB,GiB to KiB and round to integers for "Shared" column
+			while IFS= read -r -d "" -n 1 CHAR; do
+				case "$CHAR" in
+				"K") FOUR=$(awk '{N=$1 ; printf("%.f" , N)}' <<< "$FOUR") ; break ;; 
+				"M") FOUR=$(awk '{N=$1*1024 ; printf("%.f" , N)}' <<< "$FOUR") ; break ;; 
+				"G") FOUR=$(awk '{N=$1*1024*1024 ; printf("%.f" , N)}' <<< "$FOUR") ; break ;; 
+				"*") F_MESSAGE_ERROR "Unknown CHAR variable, try fix script."  ; exit 1 ;; esac
+			done <<< "$FIVE"
+
+			[ -z "$SUM_FOUR" ] && SUM_FOUR=0
+			SUM_FOUR="$((${SUM_FOUR}+${FOUR}))"
+		fi
+	fi
+done <<< "$OUTPUT"
+
+echo "$OUTPUT"
+echo "  Total Private = $((${SUM_ONE}/1024)) MiB"
+echo "  Total Shared = $((${SUM_FOUR}/1024)) MiB"
+echo "  Together = $(($((${SUM_ONE}/1024))+$((${SUM_FOUR}/1024)))) MiB"
+F_TOTAL_USED ; echo "  Total used (from free command) = $TOTAL_USED MiB"
+}
+#===================
+
+
+#========================={
+case $1 in
+	"--help"|"-h")
+		echo "  Help help. "
+		echo "  Is there someone there? :)"
+		echo " "
+		echo "  Tool to summarize used memory"
+		echo " "
+		echo "  Options:"
+		echo " "
+		echo "  --forest         The process tree. Useful to find the PID number."
+		echo " "
+		echo "  --ps-group PID_number          summary for the group of processes "
+		echo "                                 (used ps command)"
+		echo " "
+		echo "  --ps-single PID_number         summary for one process "
+		echo "                                 (used ps command)"
+		echo " "
+		echo "  --top-group PID_number         summary for the group of processes "
+		echo "                                 (used top command)"
+		echo " "
+		echo "  --top-single PID_number        summary for one process "
+		echo "                                 (used top command)"
+		echo " "
+		echo "  --ps-mem.py                    summary from ps_mem.py script from place where is this script."
+		echo " "
+		echo " "
+	;;
+	"--ps-group")
+		F_PS_GROUP $2
+	;;
+	"--ps-single")
+		F_PS_SINGLE $2
+	;;
+	"--top-group")
+		F_TOP_GROUP $2
+	;;
+	"--top-single")
+		F_TOP_SINGLE $2
+	;;
+	"--ps-mem.py")
+		## ! It requires having a script "ps_mem.py" in this directory where the script will run. ! Date: 23.02.2022 y.
+		F_PS_MEM
+	;;
+	"--forest")
+		F_FOREST
+	;;
+	*)
+		echo "Unknown option: $1"
+		echo "	Try use: $0 --help"
+	;; 
+esac
+#=========================}
+
+
+
+
+

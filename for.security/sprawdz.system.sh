@@ -431,6 +431,12 @@ SS=$([ "$(which rpm)" ] && rpm -Va)
 DEBUG 1045 # "___________________________________"
 
 
+## https://nfsec.pl/security/6386
+SS=$([ "$(which dpkg)" ] && dpkg -V)
+    WRITE  "Verify all DEB Packages"
+DEBUG 1045.2 # "___________________________________"
+
+
 [ "$(which rpmorhan)" ] || SS=$(echo "Sorry, rpmorhan not installed.")
 [ "$(which rpmorhan)" ] && SS=$(rpmorphan -guess-all)
     WRITE "Find \"orphaned\" packages on your system."
