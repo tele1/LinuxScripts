@@ -1,0 +1,60 @@
+#!/bin/bash
+
+
+# Destiny: 
+#			This example  " own.bash.shell " for experiment.
+#
+# Licence: GNU GPL v3
+# Version: 1
+# How use script:			bash own.bash.shell test.script.sh 
+
+
+
+
+[ -z "$1" ] && { echo "Error: Script not exist"; exit 1 ;}
+
+while read A B ; do
+#echo "A= $A"
+
+    if [[ "$A" == "F_IF" ]] ; then
+#        echo "if $B ; then"
+        L=$(printf "%s"  "$L \n if [ $B ] ; then")
+        START_F_IF=1
+        continue
+
+    elif [[ "$A" == "F_WHILE" ]] ; then
+        L=$(printf "%s" "$L \n while [ $B ] ; do")
+        START_F_WHILE=1
+        continue
+    fi
+    
+
+    if [[ "$START_F_IF" == 1 ]] ; then
+        if [ -z "$A" ] ; then
+#            echo "fi" 
+            L=$(printf "$L \n fi")
+            START_F_IF=0
+        else
+#            echo "$A $B"
+            L=$(printf "$L \n $A $B")
+        fi
+
+    elif [[ "$START_F_WHILE" == 1 ]] ; then
+        if [ -z "$A" ] ; then
+            L=$(printf "$L \n done")
+            START_F_WHILE=0
+		else
+            L=$(printf "$L \n $A $B")
+		fi
+
+    else 
+        L=$(printf "$L \n $A $B")
+    fi
+
+done < "$1"
+
+#echo "==================="
+#echo "$L"
+#echo "==================="
+COM=$(bash -c "$L")
+echo "$COM"
