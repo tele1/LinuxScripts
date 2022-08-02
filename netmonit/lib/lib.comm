@@ -1,0 +1,175 @@
+#!/bin/bash
+
+
+# License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#========================================={
+COMM.LSOF() {
+	[[ "$1" == 'n' ]] && NUMERIC='n'
+	#	Without first description line
+	ALL_CON=$(lsof -${NUMERIC}i :0-65535 | sed '1d')
+	#	process name | PID | protocol | IP or web name 
+	CON_1=$(awk '{print $1, $2, $8, $9}' <<< "$ALL_CON" )
+	echo "$CON_1"
+}
+
+
+
+COMM.NETSTAT() {
+	[[ "$1" == 'n' ]] && NUMERIC='n'
+	ALL_CON=$(netstat -tup${NUMERIC} | sed '1,2d' | grep -v 'TIME_WAIT')
+
+	while  read -r COL_1 COL_2 COL_3 COL_4 COL_5 COL_6 COL_7; do
+		# $COL_7 = PID + process name
+		#	echo $COL_7
+
+		IFS='/'
+		while  read -r COL_71 COL_72 ; do
+			NEW_COL_7="$COL_72 $COL_71"
+		done <<< "$COL_7"
+		IFS=' '
+		
+		echo "$NEW_COL_7 $COL_1 $COL_5"
+
+	done <<< "$ALL_CON"
+}
+
+
+
+COMM.SS() {
+	[[ "$1" == 'n' ]] && NUMERIC='n'
+	ALL_CON=$(ss -utp${NUMERIC} | sed '1d')
+
+	while  read -r COL_1 COL_2 COL_3 COL_4 COL_5 COL_6 COL_7; do
+
+		IFS='"'
+		while  read -r COL_71 COL_72 COL_73 ; do
+
+			PROC_NAME="$COL_72"
+
+			IFS=','
+			while  read -r COL_731 COL_732 COL_733; do
+				IFS='='
+				while  read -r COL_7321 COL_7322; do
+					PID="$COL_7322"
+				done <<< "$COL_732"
+			done <<< "$COL_73"
+
+		done <<< "$COL_7"
+
+		IFS=' '
+
+		echo "$PROC_NAME $PID $COL_1 $COL_5"
+
+	done <<< "$ALL_CON"
+}
+
+
+
+COMM.CATCH.ALL.WITH.LSOF() {
+
+NUMBER_OF_LOOP=0
+CON_OLD=""
+
+    #    Create dir for logs
+	if [[ ! -d /var/log/netmonit ]] ; then 
+        mkdir -v /var/log/netmonit
+    else
+        #   reset
+        rm -vrf /var/log/netmonit/*
+    fi
+
+	GREEN_ECHO "DATE-TIME NAME PID STATUS LOG LOG"
+	echo "DATE-TIME NAME PID STATUS LOG LOG" > /var/log/netmonit/main.log
+
+
+	while  : ; do
+	
+	    #   Without first description line
+	    #   catching ping from lsof is impossible
+	    #   lsof -P port numbers to port names 
+	    #   lsof -n	network numbers to host names
+	    ALL_CON=$(lsof -Pi :0-65535)
+	    
+	    #   Time
+	    TIME=$(date +"%Y/%m/%d-%H:%M")
+	    
+	    #	process name | PID | protocol | IP or web name 
+	    CON_1=$( sed '1d' <<< "$ALL_CON" | awk '{print "'$TIME'", $1, $2, $8, $9}' )
+	    
+	    #    Print output only new processes.
+	    #==================================================={
+	    LIST_OF_PROCESS=$(awk '{print $2, $3}' <<< "$CON_1" | sort | uniq)
+	    
+	    while  read -r COL_1 COL_2 ; do
+
+	        if [ ! -f "/var/log/netmonit/$COL_2.pstree" ]; then
+	        
+	           echo "$(pstree -paAt)" > "/var/log/netmonit/$COL_2.pstree"
+	           COUNT=$(grep ",${COL_2}" "/var/log/netmonit/$COL_2.pstree" | wc -l)
+
+
+	           # if PID exist in "pstree" output
+	           if [ "$COUNT" == 1 ] ; then
+	           
+	                grep "$COL_2\|COMMAND" <<< "$ALL_CON" > "/var/log/netmonit/$COL_2.lsof"
+	                MESSAGE="$TIME $COL_1 $COL_2 catched /var/log/netmonit/$COL_2.pstree  /var/log/netmonit/$COL_2.lsof"  
+	                echo "$MESSAGE" | tee -a /var/log/netmonit/main.log
+	                notify-send 'New connection' "$MESSAGE" -u critical -t 999000 -i info
+
+
+	           # if PID not exist in "pstree" output    
+	           elif [ "$COUNT" == 0 ] ; then
+	           
+	                echo "$COL_1 $COL_2 escaped"
+	                rm -v "/var/log/netmonit/$COL_2.pstree"
+	                
+	           else
+	                echo "$COL_1 $COL_2 variable COUNT = $COUNT : wrong value"
+	           fi
+
+	        fi
+ 
+	    done <<< "$LIST_OF_PROCESS"
+	    #===================================================}
+ 
+    done
+}
+
+
+
+ADD.TO.CRON() {
+    REAL_PATH_NETMONIT=$(realpath $0)
+    echo "Enter your user name:"
+    read USERNAME
+        if ! grep -q "$USERNAME" <<< "$(ls /home/)" ; then
+            RED_ECHO "Error: User name not found in /home/ folder."
+            exit 1
+        fi
+    
+    crontab -l | { cat ; echo "@reboot      export DISPLAY=:0.0 && export XAUTHORITY=/home/"$USERNAME"/.Xauthority \
+    && \$(bash "$REAL_PATH_NETMONIT" --catch-all-with-lsof)"  ; } | crontab - 
+        if [ "$?" == 0 ] ; then
+            GREEN_ECHO "[ENTRY SAVED]"
+                echo "CRONTAB LIST:"
+                crontab -l
+        else
+            RED_ECHO "Error "
+        fi
+}
+
+
+
+
+REMOVE.FROM.CRON() {
+    REAL_PATH_NETMONIT=$(realpath $0)
+    
+    crontab -l | grep -v "bash $REAL_PATH_NETMONIT --catch-all-with-lsof" | crontab -
+        if [ "$?" == 0 ] ; then
+            GREEN_ECHO "[ENTRY REMOVED]"
+                echo "CRONTAB LIST:"
+                crontab -l
+        else
+            echo "error "
+        fi
+}
+#=========================================}

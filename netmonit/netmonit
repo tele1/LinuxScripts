@@ -3,7 +3,7 @@
 
 # Developed for Linux
 # License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Version 9
+# Version 10
 # Destiny: Network connection statistics 
 # Script usage: bash script --help
 
@@ -16,15 +16,17 @@
 # Check root running
 [[ $EUID -ne 0 ]] && echo -e "'\e[0;31m' This script must be run as root. '\e[0m'" && exit 1
 
+#   Need for run lib from other place
+REAL_DIR_PATH_NETMONIT="$(dirname "$(realpath $0)")"
 
 #  netmonit dependecies
-source lib/lib.netmonit.dep
-source lib/lib.colors
-source lib/lib.pstree
-source lib/lib.comm
-source lib/lib.netmonit.help
-source lib/lib.short
-source lib/lib.debug
+source "$REAL_DIR_PATH_NETMONIT"/lib/lib.netmonit.dep
+source "$REAL_DIR_PATH_NETMONIT"/lib/lib.colors
+source "$REAL_DIR_PATH_NETMONIT"/lib/lib.pstree
+source "$REAL_DIR_PATH_NETMONIT"/lib/lib.comm
+source "$REAL_DIR_PATH_NETMONIT"/lib/lib.netmonit.help
+source "$REAL_DIR_PATH_NETMONIT"/lib/lib.short
+source "$REAL_DIR_PATH_NETMONIT"/lib/lib.debug
 
 
 #======================================================{
@@ -159,6 +161,10 @@ case $1 in
 	--lsof)    COMM="COMM.LSOF"    ; shift ; LEVEL11 "$@" ;;
 	--netstat) COMM="COMM.NETSTAT" ; shift ; LEVEL11 "$@" ;;
 	--ss)      COMM="COMM.SS"      ; shift ; LEVEL11 "$@" ;;
+#====================
+    --catch-all-with-lsof)  COMM="COMM.CATCH.ALL.WITH.LSOF" ; LEVEL11 ;; 
+    --add-to-cron)          COMM="ADD.TO.CRON" ; LEVEL11  ;;
+    --remove-from-cron)     COMM="REMOVE.FROM.CRON" ; LEVEL11 ;;
 #====================
 	*)
 		echo "Unknown argument: $1"

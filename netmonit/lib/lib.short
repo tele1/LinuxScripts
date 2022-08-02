@@ -31,7 +31,7 @@ F.TREE() {
 		PS_TREE=$(pstree -paAt)
 		PROC.OF.PSTREE_2 "$PID"
 	else
-		PROC_PSTREE_OUT=$(pstree -ptsa "$PID")
+		PROC_PSTREE_OUT=$(pstree -past "$PID")
 	fi
 }
 
@@ -95,6 +95,7 @@ SHOW.OR.LOG() {
 		echo "$@"
 	fi
 
+	    
 	# Change log if file is bigger than 1 MB.
 	if [ $(stat -c%s "/var/log/netmonit.log") -gt '1048576' ]; then
 		if [ -f "/var/log/netmonit.log.1" ]; then rm /var/log/netmonit.log.1 ; fi

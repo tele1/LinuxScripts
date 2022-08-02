@@ -1,11 +1,11 @@
 #!/bin/bash
 
 
-## Developed for Linux
-## License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-	VERSION='1'
-## Destiny: Install Update Clean etc.
-## Script usage: bash script_name
+##      Developed for Linux
+##      License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+        VERSION='1'
+##      Destiny: Install Update Clean etc.
+##      Script usage: bash script_name
 
 ##=========================={
 ##    Info:

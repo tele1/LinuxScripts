@@ -18,5 +18,12 @@ YELLOW_ECHO() {
     echo -e "${YW}${1}${NC}"
 }
 
+RED_ECHO() {
+    echo -e "${RD}${1}${NC}"
+}
 
+RESET_COL_ECHO_FROM_PIPE() {
+    #sed 's/\x1B\[[0-9;]*[JKmsu]//g' "${1}"
+    sed 's/\x1B\[[0-9;]*[JKmsu]//g' <<<"$(</dev/stdin)"
+}
 #============================================================================}
