@@ -1,0 +1,68 @@
+#!/bin/bash
+
+
+# License:  GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+# Destiny:  To send the message with notify-send from root to user account.
+#
+# How to use from root: 
+#       source lib.notify.send  ; NOTIFY_SEND 'title' 'text' 
+#   Expect a message on the desktop of the screen.
+#============================================================================{
+
+#   Need for run lib from other place
+#REAL_DIR_PATH_NETMONIT="$(dirname "$(realpath $0)")"
+
+#  dependecies
+source "$REAL_DIR_PATH_NETMONIT"/lib/lib.detect.base.linux.distro
+
+#   currently unnecessary for netmonit. left for the future
+ASK_FOR_USER_NAME() {
+    echo "Enter your user name for notify-send:"
+    read -r USER_NAME
+        if ! grep -q "$USER_NAME" <<< "$(ls /home/)" ; then
+            RED_ECHO "Error: User name not found in /home/ folder."
+            exit 1
+        fi
+}
+
+#----------------------------------------------------------------------------{
+if [[ "$BASE_LINUX_DISTRO" == "Ubuntu" ]] ; then
+
+    NOTIFY_SEND() {
+        #   I can not  use" && \ " to split the line below, so I created variable 
+        SEND_MESSAGE() { notify-send "${1}" "${2}"  -u normal -t 999000 -i info ;}
+        
+        ##  I added variables also for cron jobs from root
+        export DISPLAY=:0.0 && export XAUTHORITY="/home/${USER_NAME}/.Xauthority" && SEND_MESSAGE "${1}" "${2}"
+    }
+
+     
+elif [[ "$BASE_LINUX_DISTRO" == "Arch" ]] ; then
+
+    NOTIFY_SEND() {
+        #   https://wiki.archlinux.org/title/Desktop_notifications#Bash
+        sudo -u "$USER_NAME" DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus notify-send "${1}" "${2}"  -u normal -t 999000 -i info
+    }
+     
+     
+else
+    echo "Warning:  notify-send may not work on your system."
+    echo "I need your help / notification to improve this script."
+    
+    NOTIFY_SEND() {
+        notify-send "${1}" "${2}"  -u normal -t 999000 -i info
+    }
+fi
+#----------------------------------------------------------------------------}
+
+#============================================================================}
+
+
+
+
+
+
+
+
+
+

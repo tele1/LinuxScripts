@@ -3,7 +3,7 @@
 
 # Developed for Linux
 # License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Version 10
+# Version 11
 # Destiny: Network connection statistics 
 # Script usage: bash script --help
 
@@ -17,15 +17,15 @@
 [[ $EUID -ne 0 ]] && echo -e "'\e[0;31m' This script must be run as root. '\e[0m'" && exit 1
 
 #   Need for run lib from other place
-REAL_DIR_PATH_NETMONIT="$(dirname "$(realpath $0)")"
+REAL_DIR_PATH_NETMONIT="$(dirname "$(realpath "$0")")"
 
 #  netmonit dependecies
-source "$REAL_DIR_PATH_NETMONIT"/lib/lib.netmonit.dep
+source "$REAL_DIR_PATH_NETMONIT"/lib/netmonit.dep
 source "$REAL_DIR_PATH_NETMONIT"/lib/lib.colors
 source "$REAL_DIR_PATH_NETMONIT"/lib/lib.pstree
-source "$REAL_DIR_PATH_NETMONIT"/lib/lib.comm
-source "$REAL_DIR_PATH_NETMONIT"/lib/lib.netmonit.help
-source "$REAL_DIR_PATH_NETMONIT"/lib/lib.short
+source "$REAL_DIR_PATH_NETMONIT"/lib/netmonit.comm
+source "$REAL_DIR_PATH_NETMONIT"/lib/netmonit.help
+source "$REAL_DIR_PATH_NETMONIT"/lib/netmonit.short
 source "$REAL_DIR_PATH_NETMONIT"/lib/lib.debug
 
 
@@ -104,7 +104,7 @@ else
 	if [[ "$V_SHORTEN" == 1 ]] ; then
 		F.SHORT
 	else
-		${COMM}
+		"${COMM}"
 	fi
 fi
 
@@ -162,9 +162,9 @@ case $1 in
 	--netstat) COMM="COMM.NETSTAT" ; shift ; LEVEL11 "$@" ;;
 	--ss)      COMM="COMM.SS"      ; shift ; LEVEL11 "$@" ;;
 #====================
-    --catch-all-with-lsof)  COMM="COMM.CATCH.ALL.WITH.LSOF" ; LEVEL11 ;; 
-    --add-to-cron)          COMM="ADD.TO.CRON" ; LEVEL11  ;;
-    --remove-from-cron)     COMM="REMOVE.FROM.CRON" ; LEVEL11 ;;
+    --catch-all-with-lsof)  COMM="COMM.CATCH.ALL.WITH.LSOF" ; "${COMM}" "$2";; 
+    --add-to-cron)          COMM.ADD.TO.CRON      ;;
+    --remove-from-cron)     COMM.REMOVE.FROM.CRON ;;
 #====================
 	*)
 		echo "Unknown argument: $1"

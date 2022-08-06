@@ -1,0 +1,41 @@
+#!/bin/bash
+
+
+# License:  GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+# Destiny:  To add or remove job from cron.
+#
+# How to use:
+#       source lib.cron  ; ADD.TO.CRON 'time frame' 'task'
+#       source lib.cron  ; REMOVE.FROM.CRON 'line which includes'
+#============================================================================{
+
+ADD.TO.CRON() {
+    [[ -z "$1" ]] && { echo "Error: First argument \$1 is empty" ; exit 1 ;}
+    [[ -z "$2" ]] && { echo "Error: Second argument \$2 is empty" ; exit 1 ;}    
+
+    crontab -l | { cat ; echo "${1}      ${2}"  ; } | crontab - 
+    
+    if [ "$?" == 0 ] ; then
+        GREEN_ECHO "[ENTRY SAVED]"
+        echo "CRONTAB LIST:"
+        crontab -l
+    else
+        RED_ECHO "Error from crontab."
+    fi
+}
+
+
+REMOVE.FROM.CRON() {
+    [[ -z "$1" ]] && { echo "Error: First argument \$1 is empty" ; exit 1 ;}
+
+    crontab -l | grep -v "${1}" | crontab -
+    
+    if [ "$?" == 0 ] ; then
+        GREEN_ECHO "[ENTRY REMOVED]"
+        echo "CRONTAB LIST:"
+        crontab -l
+    else
+        echo "Error from crontab. "
+    fi
+}
+#============================================================================}

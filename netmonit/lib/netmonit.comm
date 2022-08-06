@@ -67,6 +67,23 @@ COMM.SS() {
 
 COMM.CATCH.ALL.WITH.LSOF() {
 
+#   Get USER_NAME from "--notify=user_name"
+#--------------{
+if [[ ! -z "$1" ]] ; then
+    USER_NAME=$(awk -F= '/notify/{print $2}' <<< "$1")
+        if [[ -z "$USER_NAME" ]] ; then
+            RED_ECHO "Error: User name variable is empty. A badly written argument."
+            exit 1
+        elif ! grep -q "$USER_NAME" <<< "$(ls /home/)" ; then
+            RED_ECHO "Error: User name $USER_NAME not found in /home/ folder."
+            exit 1
+        fi
+fi
+#--------------}
+
+#   For notify-send command
+source "$REAL_DIR_PATH_NETMONIT"/lib/lib.notify.send
+
 NUMBER_OF_LOOP=0
 CON_OLD=""
 
@@ -114,7 +131,10 @@ CON_OLD=""
 	                grep "$COL_2\|COMMAND" <<< "$ALL_CON" > "/var/log/netmonit/$COL_2.lsof"
 	                MESSAGE="$TIME $COL_1 $COL_2 catched /var/log/netmonit/$COL_2.pstree  /var/log/netmonit/$COL_2.lsof"  
 	                echo "$MESSAGE" | tee -a /var/log/netmonit/main.log
-	                notify-send 'New connection' "$MESSAGE" -u critical -t 999000 -i info
+	                #   notify-send
+	                if [[ ! -z "$USER_NAME" ]] ; then
+	                    NOTIFY_SEND 'New connection' "$MESSAGE"
+	                fi
 
 
 	           # if PID not exist in "pstree" output    
@@ -136,40 +156,28 @@ CON_OLD=""
 }
 
 
+#   For COMM.ADD.TO.CRON and COMM.REMOVE.FROM.CRON functions
+source "$REAL_DIR_PATH_NETMONIT"/lib/lib.cron
 
-ADD.TO.CRON() {
-    REAL_PATH_NETMONIT=$(realpath $0)
-    echo "Enter your user name:"
-    read USERNAME
+
+COMM.ADD.TO.CRON() {
+    #REAL_PATH_NETMONIT=$(realpath $0)
+    echo "Enter your user name, needed for notify-send:"
+    read -r USERNAME
         if ! grep -q "$USERNAME" <<< "$(ls /home/)" ; then
             RED_ECHO "Error: User name not found in /home/ folder."
             exit 1
         fi
-    
-    crontab -l | { cat ; echo "@reboot      export DISPLAY=:0.0 && export XAUTHORITY=/home/"$USERNAME"/.Xauthority \
-    && \$(bash "$REAL_PATH_NETMONIT" --catch-all-with-lsof)"  ; } | crontab - 
-        if [ "$?" == 0 ] ; then
-            GREEN_ECHO "[ENTRY SAVED]"
-                echo "CRONTAB LIST:"
-                crontab -l
-        else
-            RED_ECHO "Error "
-        fi
+        
+    echo "Info: The script should run after restarting the computer."
+    ADD.TO.CRON "@reboot"      "export DISPLAY=:0.0 && export XAUTHORITY=/home/"$USERNAME"/.Xauthority \
+    && \$(bash "${REAL_DIR_PATH_NETMONIT}/netmonit" --catch-all-with-lsof)"
 }
 
 
-
-
-REMOVE.FROM.CRON() {
+COMM.REMOVE.FROM.CRON() {
     REAL_PATH_NETMONIT=$(realpath $0)
-    
-    crontab -l | grep -v "bash $REAL_PATH_NETMONIT --catch-all-with-lsof" | crontab -
-        if [ "$?" == 0 ] ; then
-            GREEN_ECHO "[ENTRY REMOVED]"
-                echo "CRONTAB LIST:"
-                crontab -l
-        else
-            echo "error "
-        fi
+    REMOVE.FROM.CRON "bash $REAL_PATH_NETMONIT --catch-all-with-lsof"
 }
+
 #=========================================}
