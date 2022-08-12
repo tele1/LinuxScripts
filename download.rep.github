@@ -1,0 +1,41 @@
+#!/bin/bash
+
+
+echo "Write user name of github repository"
+read -r USER_NAME
+        if [[ -z "$USER_NAME" ]] ; then
+            echo "Error: User name is empty."
+            exit 1
+        fi
+
+
+REPOSITORIES=$(curl -s https://github.com/${USER_NAME}?tab=repositories | grep "codeRepository" | awk -F'"' '{print $2}')
+
+        if [[ -z "$REPOSITORIES" ]] ; then
+            echo "Error: Repositories are empty or user name not exists."
+            exit 1
+        fi
+
+
+COUNT=$(wc -l <<< "$REPOSITORIES")
+echo "Found $COUNT repositories."
+
+
+        if [[ -d Downloaded ]] ; then 
+            echo "Error: Folder Downloaded exists. Download stopped."
+            echo "  I'll wait until the folder disappears."
+            exit 1
+        fi
+
+echo "Download:"
+mkdir Downloaded
+cd Downloaded
+    if [ ! $? == 0 ] ; then
+        echo "Error in script" ; exit 1
+    fi
+    
+while  read -r LINK ; do
+    echo "$LINK"
+    echo "git clone https://github.com${LINK}"
+done <<< "$REPOSITORIES"
+        

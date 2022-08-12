@@ -1,8 +1,8 @@
 #!/bin/bash
 
 
-# License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-
+#   License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   Destiny:  Alternative to "pstree -spa".
 #============================================================================{
 PROC.OF.PSTREE_2() {
 #		This is instead of command "pstree -spa"

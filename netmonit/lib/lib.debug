@@ -1,7 +1,14 @@
 #!/bin/bash
 
 
-# License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   Destiny:  It allows you to turn on debugging and create and display additional messages if debugging is turned on.
+#
+#   How to use:
+#       source lib.colors 
+#       source lib.debug  
+#           DEBUG_1 "Your message"
+#           DEBUG_1 "Variable name = $VARIABLE"
 #============================================================================{
 
 # ON / OFF

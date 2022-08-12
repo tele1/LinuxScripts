@@ -1,12 +1,14 @@
 #!/bin/bash
 
 
-# License:  GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Destiny:  To add or remove job from cron.
+#   License:  GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   Destiny:  To add or remove job from cron.
 #
-# How to use:
-#       source lib.cron  ; ADD.TO.CRON 'time frame' 'task'
-#       source lib.cron  ; REMOVE.FROM.CRON 'line which includes'
+#   How to use:
+#       source lib.colors  
+#       source lib.cron  
+#           ADD.TO.CRON "time frame" "task"
+#           REMOVE.FROM.CRON "the line which we want to delete"
 #============================================================================{
 
 ADD.TO.CRON() {

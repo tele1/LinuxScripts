@@ -1,7 +1,13 @@
 #!/bin/bash
 
 
-# License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   Destiny:  This will color your message.
+#
+#   How to use example:
+#       source lib.colors
+#           GREEN_ECHO  "Your message"
+#           YELLOW_ECHO "Your message"
 #============================================================================{
 
 NC='\e[0m'    # Reset Color

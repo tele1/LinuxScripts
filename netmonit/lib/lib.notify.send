@@ -1,12 +1,16 @@
 #!/bin/bash
 
 
-# License:  GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Destiny:  To send the message with notify-send from root to user account.
+#   License:  GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   Destiny:  To send the message with notify-send from root to user account.
 #
-# How to use from root: 
-#       source lib.notify.send  ; NOTIFY_SEND 'title' 'text' 
-#   Expect a message on the desktop of the screen.
+#   How to use from root: 
+#       source lib.colors library  
+#       source lib.detect.base.linux.distro  
+#       source lib.notify.send  
+#           NOTIFY_SEND 'title' 'text' 
+#   Info:
+#       Expect a message on the desktop of the screen.
 #============================================================================{
 
 #   Need for run lib from other place

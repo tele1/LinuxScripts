@@ -1,10 +1,13 @@
 #!/bin/bash
 
 
-# Destiny:  A script designed to detect the base Linux distribution
-# How to use: source lib.detect.base.linux.distro ; echo "$BASE_LINUX_DISTRO"
-#   Expect a distribution name on output, eg Ubuntu.
-# License:  GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   License:  GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   Destiny:  A script designed to detect the base Linux distribution
+#
+#   How to use: 
+#       source lib.detect.base.linux.distro ; echo "$BASE_LINUX_DISTRO"
+#   Info: 
+#       Expect a distribution name on output, eg. Ubuntu, Arch.
 #============================================================================{
 
 if grep -riq "Ubuntu" /etc/*release ; then
@@ -17,6 +20,7 @@ else
     BASE_LINUX_DISTRO="Other"
 fi
 
+#   For debug if you need.
 #echo "$BASE_LINUX_DISTRO"
 
 #============================================================================}
