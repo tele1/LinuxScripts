@@ -1,6 +1,12 @@
 #!/bin/bash
 
 
+#   License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   Destiny:  To download repository from GitHub
+#
+#   Script usage: bash script_name
+#============================================================================{
+
 echo "Write user name of github repository"
 read -r USER_NAME
         if [[ -z "$USER_NAME" ]] ; then
