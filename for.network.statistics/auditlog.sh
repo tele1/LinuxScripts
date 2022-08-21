@@ -40,6 +40,13 @@ case $1 in
 		echo "                                    3013887 = id"
 		echo "                                    The -s option allows you to find specific lines."
 		echo " "
+		echo " Info:"
+		echo " App audit needs a special entry to save internet connections"
+		echo " For example line in file /etc/audit/rules.d/audit.rules" 
+		echo ' -a exit,always -F arch=b64 -F a0=2 -F a1&=2 -S socket -k SOCKET '
+		echo " You can test temporarily:"
+		echo ' auditctl -a exit,always -F arch=b64 -F a0=2 -F a1\&=2 -S socket -k SOCKET'
+		echo " "
 		
 	;;
 	"--list"|"-l")
