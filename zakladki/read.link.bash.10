@@ -1,0 +1,181 @@
+#!/bin/bash
+
+
+# License:		GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+# Destiny:      For managing links from the web browser.
+VERSION="Beta 10"
+# Source:       "https://github.com/tele1/LinuxScripts"
+
+# Script usage: bash script_name
+
+
+#--------------------------------------------------------------------------
+## "realpath" is good advice instead "./" https://forums.linuxmint.com/viewtopic.php?p=2208260#p2208260
+PATH_OF_SCRIPT="$(dirname "$(realpath $0)")"
+source "$PATH_OF_SCRIPT"/link.data/function.select.option.bash
+source "$PATH_OF_SCRIPT"/link.data/functions.keyboard.shortcuts.bash
+source "$PATH_OF_SCRIPT"/link.data/functions.options.of.script.bash
+source "$PATH_OF_SCRIPT"/link.data/splash.bash
+PATH_OF_LINKS="./linki"
+BACK=0
+#OPEN_LINK=0
+# You can change: ON / OFF
+DEBUG_1="OFF"
+
+# if options are enabled
+if [[ ! -z "$1" ]] ; then
+case "$1" in
+	"--help"|"-h")
+        FUNC_HELP 
+    ;;
+    "--import=bookmarks.html")
+        FUNC_IMPORT_BOOKMARKS_HTML "$1" "$2"
+    ;;
+    *)
+        echo "Error: Unknown option $1."
+esac
+exit 0
+fi 
+
+
+#========{
+DEBUG_1()
+{
+    if [[ "$DEBUG_1" == "ON" ]] ; then
+        echo -e " DEBUG: $1 "
+    fi
+}
+#========}
+
+
+#========{
+FUNC_OPEN() {
+    DEBUG_1 "#====== FUNC_OPEN ======={"
+    DEBUG_1 "PATH_OF_LINKS = $PATH_OF_LINKS"
+    DEBUG_1 "Choosen index CHOICE = $CHOICE"
+    DEBUG_1 "        value = ${TITLE[$CHOICE]}"
+    DEBUG_1 "  Link = ${LINK[$CHOICE]}"
+    DEBUG_1 " "
+    
+    # Update PATH_OF_LINKS for next menu
+    IF_EXIST=$(readlink -e "${TITLE[$CHOICE]}")
+    if [ ! -z "$IF_EXIST" ] ; then
+        # Path exist
+        DEBUG_1 "This is file = ${TITLE[$CHOICE]}" 
+        PATH_OF_LINKS="${TITLE[$CHOICE]}"
+        DEBUG_1 "PATH_OF_LINKS updated."
+        EDIT_FILE_PATH="$PATH_OF_LINKS"
+    else
+        # Path not exist
+        DEBUG_1 "This is title = ${TITLE[$CHOICE]}"
+    fi
+    DEBUG_1 "#====== FUNC_OPEN =======}"
+} 
+#========}
+
+#============{
+FUNC_SAVE_FILE_TO_ARRAYS(){
+    NUMB=0 ; while read -r COL1 COL2 ; do
+        TITLE[${NUMB}]="$COL2"
+        LINK[${NUMB}]="$COL1"
+        NUMB=$((${NUMB}+1))
+    done < "$PATH_OF_LINKS"
+}
+#============}
+
+
+FUNC_BACK_FROM_FILE() {
+    if [[ "$BACK" == 1 ]] ; then
+        # Clear link
+        LINK=()
+        # Cut last part of the path = for move up / higher path
+        PATH_OF_LINKS="${PATH_OF_LINKS%/*}"
+#        PATH_OF_LINKS="${PATH_OF_LINKS%/*}"
+        # forbidden path "./"
+        if [[ "$PATH_OF_LINKS" == '.' ]] ; then 
+            PATH_OF_LINKS='./linki'
+        fi
+        DEBUG_1 "FUNC_BACK -> PATH_OF_LINKS = $PATH_OF_LINKS"
+        BACK=0
+#        DEBUG_1 "  Link22 = ${LINK[$CHOICE]}"
+    fi
+}
+
+
+FUNC_BACK_FROM_PATHS() {
+    # Back to path above
+    PATH_OF_LINKS="${PATH_OF_LINKS%/*}"
+    if [[ "$PATH_OF_LINKS" == '.' ]] ; then 
+        PATH_OF_LINKS='./linki'
+    fi
+    DEBUG_1 "FUNC_BACK_FROM_PATHS : PATH_OF_LINKS updated"
+    DEBUG_1 "FUNC_BACK_FROM_PATHS : PATH_OF_LINKS = $PATH_OF_LINKS"
+    ## clear CHOICE array
+    #CHOICE=()
+}
+
+#========{
+FUNC_OPEN_PATHS() {
+    ##  My files
+    TITLE=(${PATH_OF_LINKS}/*)
+
+    FUNCTION_select_option "${TITLE[@]}"
+    CHOICE=$?
+    
+    if [[ "$BACK" == 1 ]] ; then
+        FUNC_BACK_FROM_PATHS
+    else
+        FUNC_OPEN
+    fi
+}
+#========}
+
+
+
+
+[[ "$DEBUG_1" == "OFF" ]] && FUNC_SPLASH
+while true ; do
+   [[ "$DEBUG_1" == "OFF" ]] && clear
+    DEBUG_1 "Start of the loop: while true"
+    DEBUG_1 "PATH_OF_LINKS = $PATH_OF_LINKS"
+    if [[ "$HELP_MENU" == "1" ]] ; then
+        FUNC_HELP
+        echo "Press spacebar to continue."
+        read -rN 1
+        HELP_MENU=0
+    fi
+
+    
+    if [[ -d "$PATH_OF_LINKS" ]] ; then
+        DEBUG_1 "$PATH_OF_LINKS is a directory"
+        FUNC_OPEN_PATHS
+        [[ "$EDIT_FILE" == "1" ]] && NOTE="  Error: Before press e key, You need open file to edit. " && EDIT_FILE=0
+        [[ "$MOVE_LINK" == "1" ]] && NOTE="  Error: Before press m key, You need select link in file. " && MOVE_LINK=0
+        [[ "$DELETE_LINK" == "1" ]] && NOTE="  Error: Before press m key, You need select link in file. " && DELETE_LINK=0
+    elif [[ -f "$PATH_OF_LINKS" ]]; then
+        DEBUG_1 "$PATH_OF_LINKS is a file"
+        FUNC_OPEN_LINK 
+        [[ "$EDIT_FILE" == "1" ]] && FUNC_EDIT_FILE && EDIT_FILE=0
+        [[ "$MOVE_LINK" == "1" ]] && FUNC_MOVE_LINK && MOVE_LINK=0
+        [[ "$DELETE_LINK" == "1" ]] && FUNC_DELETE_LINK && DELETE_LINK=0
+    else
+        DEBUG_1 "$PATH_OF_LINKS is not valid"
+        exit 1
+    fi
+    
+    ## reset back
+    BACK=0
+done
+
+echo "Error: End of script."
+
+
+
+
+
+
+
+
+
+
+
