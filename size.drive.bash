@@ -3,7 +3,7 @@
 
 ##      Developed for Linux
 ##      License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-        VERSION='1'
+        VERSION='2'
 ##      Destiny: To compare partition size.
 ##      Script usage: bash script_name
 
@@ -101,6 +101,7 @@ CHECK() {
     CHECK df
     if [[ "$SKIP" == 0 ]] ; then
         GREEN_ECHO "  From df (GiB)"
+        GREEN_ECHO " Info: the size inside df may not be correct."
         df -Th | grep -v tmpfs
     fi
 }
@@ -278,13 +279,23 @@ READ_OUTPUT() {
 case $1 in
 	"--help"|"-h")
 	    echo " "
-	    echo "                no options = run all options."
+	    echo "                  No options = run all options."
 	    echo " "
-		echo " -o             Specify which commands to print."
+		echo " -o               Specify which commands to print."
 		echo " "
-		echo " Available commands:"
-	    echo "  -lsblk  -example  -procpart  -df  -sysblock  -blockdev "
-	    echo "  -parted  -fdisk  -sfdisk  -dumpe2fs  -tune2fs "
+		echo " Available commands with -o argument:"
+	    echo "  -lsblk          Like lsblk command "
+	    echo "  -example        Example with lsblk command "
+	    echo "  -procpart       Like /proc/partitions file "
+	    echo "  -df             Like df command, "
+	    echo "                  the size inside df may not be correct."
+	    echo "  -sysblock       Like /sys/block/ file "
+	    echo "  -blockdev       Like blockdev command"
+	    echo "  -parted         Like parted command"
+	    echo "  -fdisk          Like fdisk command"
+	    echo "  -sfdisk         Like sfdisk command"
+	    echo "  -dumpe2fs       Like dumpe2fs command"
+	    echo "  -tune2fs        Like tune2fs command"
     ;;
 	"")
 	    -lsblk ; -example ; -procpart ; -df ; -sysblock ; -blockdev
