@@ -1,21 +1,35 @@
 #!/bin/bash
 
 
-# License:		GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-# Destiny:      For managing links from the web browser.
-VERSION="Beta 10"
-# Source:       "https://github.com/tele1/LinuxScripts"
+#   License:        GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   Destiny:        For managing links from the web browser, like Firefox.
+    VERSION="Beta 11"
+#   Date:       11.2022
+#   Source:     https://github.com/tele1/LinuxScripts
 
-# Script usage: bash script_name
+#   Script usage:       bash script_name
 
 
 #--------------------------------------------------------------------------
+#========{
+##  Safeguard
+SOURCE_IF_EXIST() 
+{
+    if [[ -f "$1" ]] ; then
+        source "$1"
+    else
+        echo "Error: Source not found: $1" ; exit 1
+    fi
+}
+#========}
+
+
 ## "realpath" is good advice instead "./" https://forums.linuxmint.com/viewtopic.php?p=2208260#p2208260
 PATH_OF_SCRIPT="$(dirname "$(realpath $0)")"
-source "$PATH_OF_SCRIPT"/link.data/function.select.option.bash
-source "$PATH_OF_SCRIPT"/link.data/functions.keyboard.shortcuts.bash
-source "$PATH_OF_SCRIPT"/link.data/functions.options.of.script.bash
-source "$PATH_OF_SCRIPT"/link.data/splash.bash
+SOURCE_IF_EXIST "$PATH_OF_SCRIPT"/link.data/function.select.option.bash
+SOURCE_IF_EXIST "$PATH_OF_SCRIPT"/link.data/functions.keyboard.shortcuts.bash
+SOURCE_IF_EXIST "$PATH_OF_SCRIPT"/link.data/functions.options.of.script.bash
+SOURCE_IF_EXIST "$PATH_OF_SCRIPT"/link.data/splash.bash
 PATH_OF_LINKS="./linki"
 BACK=0
 #OPEN_LINK=0
@@ -28,8 +42,14 @@ case "$1" in
 	"--help"|"-h")
         FUNC_HELP 
     ;;
-    "--import=bookmarks.html")
+    "--version")
+        echo "$VERSION" 
+    ;;
+    "-i.html")
         FUNC_IMPORT_BOOKMARKS_HTML "$1" "$2"
+    ;;
+    "-i.tabs")
+        FUNC_IMPORT_TABS_URL "$1" "$2"
     ;;
     *)
         echo "Error: Unknown option $1."

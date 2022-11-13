@@ -15,7 +15,36 @@ FUNC_EDIT_FILE() {
 #====={
 FUNC_HELP() {
     echo " "
-    echo "Keyboard Shortcuts: "
+    echo "  Available arguments for this script:"
+    echo " "
+    echo " -i.html /path/to/file    Import bookmarks.html file from Firefox web browser. "
+    echo "                      Info: "
+    echo "                          Firefox 106 stores bookmarks in places.sqlite file and in bookmarkbackups"
+    echo "                          You need export from places.sqlite to bookmarks.html file alone."
+    echo "                          You can try use: Firefox, sqlite3, places2html.py"
+    echo "                          Then you can import bookmarks.html with this script."
+    echo "                      Useful links:"
+    echo "                          https://support.mozilla.org/en-US/kb/profiles-where-firefox-stores-user-data "
+    echo "                          https://askubuntu.com/questions/805219/how-to-properly-view-a-sqlite-file-using-sqlite "
+    echo "                          https://gist.github.com/v3l0c1r4pt0r/15ef7181b7c4546963da68bc3b31c169 "
+    echo "                      Useful commands to find files:"
+    echo '                              reset ; find . -type f -iname "bookmarks.html" '
+    echo '                              reset ; find . -type f -iname "places.sqlite"  '
+    echo " "
+    echo ' -i.tabs /path/to/file    Import file from "Export Tabs URLs" plugin. '
+    echo "                      Info: "
+    echo '                          "Export Tabs URLs" plugin is for Firefox web browser. '
+    echo " "
+    echo " --help                   Display this help. "
+    echo " " 
+    echo " --version                Display version of this script."
+    echo " "
+    echo " "
+    echo "  Example:        bash script_name --help"
+    echo "  When you run script with no argument, then script runs a menu."
+    echo " "
+    echo " "
+    echo "  Keyboard Shortcuts in menu: "
     echo " "
     echo " esc = quit"
     echo " q   = quit"
@@ -34,6 +63,7 @@ FUNC_HELP() {
 #    echo " m = select line to move and next m + Enter select line to paste."
 #    echo " x = find identical links.  "
     echo " "
+
 }
 #=====}
 
