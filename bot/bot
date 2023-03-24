@@ -1,0 +1,148 @@
+#!/bin/bash
+
+
+#############################################################
+
+# A multi-functional script that makes life easier.
+VERSION="beta 3"
+LICENCE="GPL v3: https://www.gnu.org/licenses/gpl.html "
+SOURCE="https://github.com/tele1/LinuxScripts"
+
+#############################################################
+
+
+
+
+#===================================================={
+#----------------------{
+Func_IF_SOURCE_EXIST()  {
+    if [[ -f "$1" ]] ; then
+        source "$1"
+    else
+        echo "Error: Source not found: $1" ; exit 1
+    fi
+}
+#----------------------}
+
+Path_Of_Script="$(dirname "$(realpath $0)")"
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/best.app.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/colors.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/dictionary.ort.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/get.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/run.command.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/translate.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/web.search.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/read.bash
+#====================================================}
+
+
+
+
+#======================================================{
+FuncCommand() {
+
+## For read $1
+set -- $MyCommand
+
+    case "$1" in
+	    "--help"|"-h"|"h")
+		    echo "  All options: "
+		    echo " "
+		    echo "      best                   - Best app."
+		    echo " "
+		    echo "      check  Your_Sentence   - Check in dictionary."
+		    echo " "
+		    echo "      com: Your_Command      - Command."
+		    echo " "
+		    echo "      get                    - "
+		    echo " "
+		    echo "     --help  -h  h           - Display this help"
+		    echo "  "
+		    echo "      trans  Your_Sentence   - Translate."
+		    echo " "
+		    echo "      web  Your_Sentence     - Find in web browser."
+		    echo " "
+		    echo "      q                      - Quit"
+		    echo " "
+		    echo "  Have a nice day! :)"
+	    ;;
+	    "best")
+            Sentence="${@:2}"
+            FuncBest_App
+        ;;
+	    "check")
+            Sentence="${@:2}"
+            Func_Dictionary_Ort "$Sentence"
+	    ;;
+	    "com:")
+            Sentence="${@:2}"
+            FuncRunCommand "$Sentence"
+	    ;;
+	    "get")
+            Sentence="${@:2}"
+            # file get.bash
+            FuncCursorPosition "$Sentence"
+	    ;;
+	    "trans")
+            Sentence="${@:2}"
+            FuncTranslate "$Sentence"
+	    ;; 
+	    "web")
+            Sentence="${@:2}"
+            FuncWebSearch "$Sentence"
+	    ;; 
+	    "q") 
+	        FuncGREEN_ECHO "    Bye !" ; exit 0
+	    ;;
+	    "v")
+	        echo "      Version = $VERSION"
+	    ;; 
+	    *)
+		    echo "Unknown option: $1"
+		    echo "	Try use: $0 --help"
+	    ;; 
+    esac
+}
+#======================================================}
+
+
+
+
+#======================================================================{
+## command tput in read.bash file it's specific, so I'll use it for now "reset"
+reset
+
+FuncGREEN_ECHO " Alice: Hello!"
+while : ; do
+    FuncGREEN_ECHO " Alice: Co mogę dla Ciebie zrobić? "
+    echo " "
+    TEXT_IM=$(FuncYELLOW_ECHO " $USER: ")
+#    read -r -p  "$TEXT_IM" MyCommand
+
+
+    FuncREAD "$TEXT_IM" 
+    MyCommand=$(tail -n1 "$Path_Of_Script"/data/memory/History.txt)
+
+
+    echo ""                     ## For debug  read.bash
+    echo "=${MyCommand}="       ## For debug  read.bash
+    exit                        ## For debug  read.bash
+    
+    
+    echo " "
+    echo " "
+    FuncGREEN_ECHO " Alice:"
+    
+    #echo "$MyCommand"
+    FuncCommand         "$MyCommand"
+
+    #echo "Alice: Done"         ## For debug "while" above
+    echo "  " 
+    echo "----------------------"
+    echo " "
+done
+
+exit 0
+#======================================================================}
+
+

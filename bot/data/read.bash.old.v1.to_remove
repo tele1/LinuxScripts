@@ -1,0 +1,122 @@
+#!/bin/bash
+
+
+#############################################################
+
+##      LICENCE="GPL v3: https://www.gnu.org/licenses/gpl.html "
+##      SOURCE="https://github.com/tele1/LinuxScripts"
+
+#############################################################
+
+
+#======================================================{
+FuncREAD() {
+    # echo "$1 $2"
+
+    #read -r -p "$1 $2"
+    Prompt="$1"
+
+
+    Func_get_cursor_column()   { IFS=';' read -sdR -p $'\E[6n' ROW COL; echo ${COL#*[} ;}            
+    Func_get_cursor_row()      { IFS=';' read -sdR -p $'\E[6n' ROW COL; echo ${ROW#*[} ;}   
+    Func_cursor_to_left()      { tput cup $(( $(Func_get_cursor_row) -1 )) $(( $(Func_get_cursor_column) -2 )) ;}   
+    Func_cursor_to_right()     { tput cup $(( $(Func_get_cursor_row) -1 )) $(( $(Func_get_cursor_column) )) ;}   
+    
+    #-----------------------{
+    Func_Number_of_columns() { echo $(( tput cols  - $Count_Prompt )) ;}
+    Func_Clear_text() { K=1 ; while [ $K -le 68 ] ; do echo -n " " ;  K=$(( K + 1 )) ; done ;}
+    Func_History() {    if [[ -f "$Path_Of_Script"/data/memory/History.txt ]] ; then
+                            if [[ -z "$Number_History" ]] ; then
+                                Number_History=1
+                            fi                            
+                            if [[ "$1" == "up" ]] ; then
+                                Number_History=$(( "$Number_History" + 1 ))
+                                sed -n "$Number_History"p "$Path_Of_Script"/data/memory/History.txt  | tr -d '\n'
+                            elif [[ "$1" == "down" ]] ;then
+                                Number_History=$(( "$Number_History" - 1 ))
+                                [[ "$Number_History" == "0" ]] && Number_History=1
+                                sed -n "$Number_History"p "$Path_Of_Script"/data/memory/History.txt  | tr -d '\n'
+                            fi
+                        else
+                            echo -n "File History not exist: $Path_Of_Script"
+                        fi  ;}
+    Func_up()   {  tput cup $Starting_cursor_position ; Func_Clear_text ; tput cup $Starting_cursor_position ; Func_History up   ;}
+    Func_down() {  tput cup $Starting_cursor_position ; Func_Clear_text ; tput cup $Starting_cursor_position ; Func_History down   ;}
+    #-----------------------}
+    
+    Func_Backspace() { Func_cursor_to_left ; echo -n " " ; Func_cursor_to_left ;}
+    
+    
+    Func_get_pressed_key() {
+
+                        IFS= read -sn1 -p "$Prompt" key  
+
+                        read -sn1 -t 0.0001 k1 
+                        read -sn1 -t 0.0001 k2
+                        read -sn1 -t 0.0001 k3
+                        key+="$k1$k2$k3"
+
+                        case $key in
+                        
+                            ##    TIP: Put command in terminal to get key number
+                            ##          showkey -a 
+                    
+                            $'\x1b') key=quit ;;    # "esc"   key
+                            $'\x71') key=quit ;;    # "q"     key
+                            "")      key=enter ;;
+                            $'\177') key=backspace ;;
+
+                            $'\x1b\x5b\x41') key=up ;;
+                            $'\x1b\x5b\x42') key=down ;;
+                            $'\x1b\x5b\x44') key=left ;;
+                            $'\x1b\x5b\x43') key=right ;;
+                            
+                        esac
+
+                        echo "$key"  ;}
+                        
+                        
+                        
+#------------------------------------{                       
+    Prompt_VALUE=0 ; while true; do
+    
+        ## For Func_up Func_down
+        if [[ "$Prompt_VALUE" == "0" ]] ; then
+            Count_Prompt=$(( $(echo -n "$Prompt" | wc -c) - 11 ))
+            #echo $Count_Prompt
+            Starting_cursor_position="$(( $(Func_get_cursor_row) -1 )) $(( $(Func_get_cursor_column) -1 + "$Count_Prompt" ))"  
+            ##  Print the number of columns for the current terminal.
+
+        fi  
+
+    
+    
+        #----------------------------
+        # user key control
+        Key=$(Func_get_pressed_key)
+
+        case  "${Key}" in
+            up)   Func_up    ;;
+            down) Func_down  ;;
+            right) Func_cursor_to_right   ;; # Forward
+            left)  Func_cursor_to_left    ;; # Backward
+            enter) break  ;;
+            backspace)  Func_Backspace ;;
+            *) printf "${Key}" ;;
+        esac
+        #----------------------------
+        
+        if [[ "$Prompt_VALUE" == "0" ]] ; then
+            Prompt=""
+            Prompt_VALUE=1
+        fi
+        
+    done
+#------------------------------------}                      
+    
+
+
+}
+#======================================================}
+
+
