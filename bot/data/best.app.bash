@@ -9,8 +9,6 @@
 #############################################################
 
 
-FuncBest_App() { echo "  Let's go together and you will do it  " ;}
-
-## FuncBest_App() { echo '  Let\'s go together and you will do it !!! ' ;}
+FuncBest_App() { echo "  Let's go together and you will do it  " \!\!\! ;}
 
 

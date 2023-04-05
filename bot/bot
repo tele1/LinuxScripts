@@ -4,7 +4,7 @@
 #############################################################
 
 # A multi-functional script that makes life easier.
-VERSION="beta 3"
+VERSION="beta 5"
 LICENCE="GPL v3: https://www.gnu.org/licenses/gpl.html "
 SOURCE="https://github.com/tele1/LinuxScripts"
 
@@ -119,7 +119,7 @@ while : ; do
     TEXT_IM=$(FuncYELLOW_ECHO " $USER: ")
 #    read -r -p  "$TEXT_IM" MyCommand
 
-
+    # For read any key pressed ; This is not a perfect solution. 
     FuncREAD "$TEXT_IM" 
     MyCommand=$(tail -n1 "$Path_Of_Script"/data/memory/History.txt)
 
