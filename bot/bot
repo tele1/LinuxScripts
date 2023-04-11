@@ -25,14 +25,15 @@ Func_IF_SOURCE_EXIST()  {
 #----------------------}
 
 Path_Of_Script="$(dirname "$(realpath $0)")"
-Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/best.app.bash
-Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/colors.bash
-Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/dictionary.ort.bash
-Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/get.bash
-Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/run.command.bash
-Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/translate.bash
-Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/web.search.bash
-Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/read.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/builtin/colors.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/builtin/read.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/mods/best.app.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/mods/dictionary.ort.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/mods/run.command.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/mods/translate.bash
+Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/mods/web.search.bash
+#Func_IF_SOURCE_EXIST "$Path_Of_Script"/data/mods/get.bash
+
 #====================================================}
 
 
@@ -54,7 +55,7 @@ set -- $MyCommand
 		    echo " "
 		    echo "      com: Your_Command      - Command."
 		    echo " "
-		    echo "      get                    - "
+		    echo "      get                    - not finished"
 		    echo " "
 		    echo "     --help  -h  h           - Display this help"
 		    echo "  "
@@ -78,11 +79,11 @@ set -- $MyCommand
             Sentence="${@:2}"
             FuncRunCommand "$Sentence"
 	    ;;
-	    "get")
-            Sentence="${@:2}"
+#	    "get")
+#            Sentence="${@:2}"
             # file get.bash
-            FuncCursorPosition "$Sentence"
-	    ;;
+            #FuncCursorPosition "$Sentence"
+#	    ;;
 	    "trans")
             Sentence="${@:2}"
             FuncTranslate "$Sentence"
@@ -124,9 +125,9 @@ while : ; do
     MyCommand=$(tail -n1 "$Path_Of_Script"/data/memory/History.txt)
 
 
-    echo ""                     ## For debug  read.bash
-    echo "=${MyCommand}="       ## For debug  read.bash
-    exit                        ## For debug  read.bash
+#    echo ""                     ## For debug  read.bash
+#    echo "=${MyCommand}="       ## For debug  read.bash
+#    exit                        ## For debug  read.bash
     
     
     echo " "

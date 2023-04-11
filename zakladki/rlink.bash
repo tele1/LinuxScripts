@@ -3,7 +3,7 @@
 
 #   License:        GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
 #   Destiny:        For managing links from the web browser, like Firefox.
-    VERSION="Beta 12"
+    VERSION="Beta 13"
 #   Date:       04.2023
 #   Source:     https://github.com/tele1/LinuxScripts
 
