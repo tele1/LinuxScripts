@@ -28,8 +28,8 @@ FUNC_HELP() {
     echo "                          https://askubuntu.com/questions/805219/how-to-properly-view-a-sqlite-file-using-sqlite "
     echo "                          https://gist.github.com/v3l0c1r4pt0r/15ef7181b7c4546963da68bc3b31c169 "
     echo "                      Useful commands to find files:"
-    echo '                              reset ; find . -type f -iname "bookmarks.html" '
-    echo '                              reset ; find . -type f -iname "places.sqlite"  '
+    echo '                              reset ; find . -type f -iname "bookmarks.html"  '
+    echo '                              reset ; find . -type f -iname "places.sqlite"   '
     echo " "
     echo ' -i.tabs /path/to/file    Import file from "Export Tabs URLs" plugin. '
     echo "                      Info: "
@@ -173,6 +173,7 @@ FUNC_OPEN_LINK() {
             xdg-open "${LINK[$CHOICE]}" 2>/dev/null
             DEBUG_1 "FUNC_OPEN_LINK: xdg-open"
             DEBUG_1 "FUNC_OPEN_LINK: OPEN_LINK = $OPEN_LINK"
+            echo "mleko ${LINK[$CHOICE]}" >> $HOME/mleko
         fi
         # reset
         OPEN_LINK=0

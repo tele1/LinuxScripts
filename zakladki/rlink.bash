@@ -3,8 +3,8 @@
 
 #   License:        GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
 #   Destiny:        For managing links from the web browser, like Firefox.
-    VERSION="Beta 11"
-#   Date:       11.2022
+    VERSION="Beta 12"
+#   Date:       04.2023
 #   Source:     https://github.com/tele1/LinuxScripts
 
 #   Script usage:       bash script_name
@@ -46,7 +46,12 @@ case "$1" in
         echo "$VERSION" 
     ;;
     "-i.html")
-        FUNC_IMPORT_BOOKMARKS_HTML "$1" "$2"
+        ## I used while to read all html files
+        ## if you added more than 1 file like this:  command -i.html file file file.
+        while  read -r ARG ; do
+            #echo "$ARG"
+            FUNC_IMPORT_BOOKMARKS_HTML "$1" "$ARG"
+        done <<< $(tr ' ' '\n' <<< "${@:2}")
     ;;
     "-i.tabs")
         FUNC_IMPORT_TABS_URL "$1" "$2"
@@ -149,11 +154,12 @@ FUNC_OPEN_PATHS() {
     fi
 }
 #========}
+#--------------------------------------------------------------------------
 
 
 
 
-[[ "$DEBUG_1" == "OFF" ]] && FUNC_SPLASH
+#[[ "$DEBUG_1" == "OFF" ]] && FUNC_SPLASH
 while true ; do
    [[ "$DEBUG_1" == "OFF" ]] && clear
     DEBUG_1 "Start of the loop: while true"
@@ -172,6 +178,7 @@ while true ; do
         [[ "$EDIT_FILE" == "1" ]] && NOTE="  Error: Before press e key, You need open file to edit. " && EDIT_FILE=0
         [[ "$MOVE_LINK" == "1" ]] && NOTE="  Error: Before press m key, You need select link in file. " && MOVE_LINK=0
         [[ "$DELETE_LINK" == "1" ]] && NOTE="  Error: Before press m key, You need select link in file. " && DELETE_LINK=0
+        Remember_Title=""
     elif [[ -f "$PATH_OF_LINKS" ]]; then
         DEBUG_1 "$PATH_OF_LINKS is a file"
         FUNC_OPEN_LINK 

@@ -73,8 +73,13 @@ FUNCTION_select_option() {
     cursor_blink_off
 
 
-
-    local selected=0
+    if [[ ! -z "$Remember_Title" ]] ; then
+         selected="$Remember_Title"
+    else
+        local selected=0
+    fi
+    
+    
     while true; do
         # Clear screen
         [[ "$DEBUG_1" == "OFF" ]] && clear
@@ -141,8 +146,8 @@ FUNCTION_select_option() {
             
             up)    ((selected--)) ; if [ $selected -lt 0 ]; then selected=$(($# - 1)); fi ;;
             down)  ((selected++)) ; if [ $selected -ge $# ]; then selected=0; fi ;;
-            right)     OPEN_LINK=1 ; break ;; # Forward
-            left)      BACK=1 ; break ;;      # Backward
+            right)     OPEN_LINK=1 ; Remember_Title="$selected" ; break ;;  # Forward
+            left)      BACK=1      ; Remember_Title=""          ; break ;;  # Backward
            
 #            add) ADD=1 ; break ;;
             delete)  DELETE_LINK=1  ; break ;;
