@@ -9,6 +9,25 @@
 #############################################################
 
 
+#============================================================================={	    
+Func_main_help_web.search.bash() {
+		    echo " "
+		    echo "      web  Your_Sentence     - Find in web browser."
+}
+
+
+Func_main_case_web.search.bash() {
+    if [[ $1 == "web" ]] ; then
+        Sentence="${@:2}"
+        FuncWebSearch "$Sentence"
+        Status_Break=break
+    fi
+}
+#=============================================================================}
+
+
+
+
 #======================================================{
 FuncWebSearch() {
 #    ddgr --np -n5 "$Sentence" | egrep -i --color "\b(${Sentence})\b|$"

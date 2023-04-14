@@ -9,6 +9,25 @@
 #############################################################
 
 
+#============================================================================={
+Func_main_help_check.ort.bash() {
+		    echo " "
+		    echo "      check  Your_Sentence   - Check in dictionary."
+}
+
+
+Func_main_case_check.ort.bash() {
+    if [[ $1 == "check" ]] ; then
+        Sentence="${@:2}"
+        Func_Dictionary_Ort "$Sentence"
+        Status_Break=break
+    fi
+}
+#=============================================================================}
+
+
+
+
 #======================================================{
 Func_Dictionary_Ort() {
 
@@ -30,7 +49,7 @@ FuncPartCheckWord() {
             Answer=$(FuncGREEN_ECHO "[Poprawne]")
             echo "$Word $Answer"
         else
-            Answer=$(FuncGREEN_ECHO "[Nie znam]")
+            Answer=$(FuncRED_ECHO "[Nie znam]")
             echo "$Word $Answer"
         fi
         
