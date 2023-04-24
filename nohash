@@ -1,0 +1,22 @@
+#!/bin/bash
+
+
+#   License:        GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   Destiny:        Displays the text without the hash mark "#" and without blank lines.
+#                   You can use with file or with pipe "|"
+    VERSION="1"
+#   Date:       04.2023
+#   Source:     https://github.com/tele1/LinuxScripts
+#   Script created by other people.
+
+#   Script usage:       bash script_name file
+#           or:         cat file | bash script_name
+#
+#===============================================================================
+
+
+if [ -n "$1" ]; then
+  sed -E '/^\s*(#.*)*$/d' "$1"
+elif [ -p /dev/stdin ]; then
+  sed -E '/^\s*(#.*)*$/d' -
+fi

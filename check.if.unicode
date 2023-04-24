@@ -1,0 +1,69 @@
+#!/bin/bash
+
+
+#   License:        GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+#   Destiny:        Displays if name and text contain unicode characters.
+#                   You can use with file or with pipe "|"
+    VERSION="beta 1"
+#   Info:       Requires testing.    
+#   Date:       04.2023
+#   Source:     https://github.com/tele1/LinuxScripts
+
+#   Script usage:       bash script_name file
+#           or:         cat file | bash script_name
+#
+#===============================================================================
+
+
+NC='\e[0m'    # Reset Color
+GN='\e[0;32m' # Green ECHO
+RD='\e[0;31m' # Red ECHO
+
+Func_GREEN_ECHO() {    echo -e "${GN}$@${NC}"   ;}
+Func_RED_ECHO()   {    echo -e "${RD}${@}${NC}" ;}
+
+Func_noascii_quiet() { LANG=C grep -q --color=always '[^ -~]\+' ;}
+Func_noascii_show()  { LANG=C grep  --color=always '[^ -~]\+'   ;}
+
+echo " "
+
+if [ -n "$1" ]; then
+    Var1="$1"
+    if Func_noascii_quiet <<< "$Var1"  ; then
+        Func_RED_ECHO "  This name of file contains Unicode:"
+        Func_noascii_show <<< "$Var1"
+        echo " "
+        Func_RED_ECHO "  This is this line with cat -vet:"
+        cat -vet <<< "$Var1" | grep  --color=always 'M-\|\^'
+    else
+        Func_GREEN_ECHO "   This name of file safe: ascii name"
+        
+        if Func_noascii_quiet < "$Var1"  ; then
+            Func_RED_ECHO "     This file contains Unicode:"
+            Func_noascii_show < "$Var1"
+            echo " "
+            Func_RED_ECHO "  This is this line with cat -vet:"
+            cat -vet < "$Var1" | grep  --color=always 'M-\|\^'
+        else
+            Func_GREEN_ECHO "   This is safe: ascii file"
+        fi
+    fi
+    
+    
+elif [ -p /dev/stdin ]; then
+    Var1="$(</dev/stdin)"
+
+    if Func_noascii_quiet <<< "$Var1"  ; then 
+        Func_RED_ECHO "  This file contains Unicode:"
+        Func_noascii_show <<< "$Var1"
+        echo " "
+        Func_RED_ECHO "  This is this line with cat -vet:"
+        cat -vet <<< "$Var1" | grep  --color=always 'M-\|\^'
+    else
+        Func_GREEN_ECHO "This is safe: ascii file"
+    fi
+fi
+
+echo " "
+
+
