@@ -43,6 +43,7 @@ FUNC_HELP() {
     echo "  Example:        bash script_name --help"
     echo "  When you run script with no argument, then script runs a menu."
     echo " "
+    echo "----------------------------------------------------------------"
     echo " "
     echo "  Keyboard Shortcuts in menu: "
     echo " "
@@ -54,14 +55,12 @@ FUNC_HELP() {
     echo " right arrow = Confirm the selected option"
     echo " left arrow  = Go back a level higher"
     echo " "
-#    echo " a = add line"
-    echo " d = delete line"
-    echo " e = edit file"
-#    echo " g = grep  " 
-    echo " h = help"
-#    echo " i = import file (firefox plugin: Export Tabs URLs)"
-#    echo " m = select line to move and next m + Enter select line to paste."
-#    echo " x = find identical links.  "
+    echo " d = Delete line"
+    echo " e = Edit file with text editor"
+    echo " g = Search word with grep  " 
+    echo " h = Help"
+    echo " m = Open Midnight Commander "
+    echo " x = find identical links  "
     echo " "
 
 }
@@ -173,7 +172,6 @@ FUNC_OPEN_LINK() {
             xdg-open "${LINK[$CHOICE]}" 2>/dev/null
             DEBUG_1 "FUNC_OPEN_LINK: xdg-open"
             DEBUG_1 "FUNC_OPEN_LINK: OPEN_LINK = $OPEN_LINK"
-            echo "mleko ${LINK[$CHOICE]}" >> $HOME/mleko
         fi
         # reset
         OPEN_LINK=0
@@ -189,3 +187,57 @@ FUNC_STATUS_CAPS_LOCK() {
     STATUS_CAPS_LOCK=$(xset q | grep Caps | awk '{ print $4 }')
 }
 #======}
+
+#=============={
+FUNC_FIND_IDENTICAL() {
+    ##  Find identical only links inside files
+
+    reset
+    
+    List_Files=$( find "$PATH_OF_SCRIPT"/linki/ -type f )
+    [[ -z "$List_Files" ]] && echo "Error: Not found files in "$PATH_OF_SCRIPT"/linki/ " && exit 1
+    Count_Files=$( wc -l <<< "$List_Files" )
+    
+
+    #---------------------------------------------{
+    Result_4=""
+    Count_of_Lines=0
+    while read -r LINE ; do
+    
+        Count_of_Lines=$(( $Count_of_Lines + 1 ))
+        [[ "$Count_of_Lines" -gt 0 ]] && { tput cup 0 0 ; tput ed ;}
+        echo " $Count_of_Lines / $Count_Files"
+    
+        ##  Link to file
+        #echo $LINE
+
+        # While
+        while read -r LINE_2 ; do
+        
+            ##  Line of file ( only link )
+            #echo $LINE_2
+            
+            if [[ ! -z "$LINE_2" ]] ; then 
+                ## "F" to use characters [] like text
+                Result_1=$( grep -rinF --color "$LINE_2" "$PATH_OF_SCRIPT"/linki/  )
+                Out="$?" ; if [[ ! "$Out" == 0 ]] ; then
+                    echo "Error: $? : $LINE_2" ; exit
+                fi
+                Result_2=$( awk -F':' '{printf $1 ":" $2 "\n"}'  <<< "$Result_1" )
+                Count_Result=$( wc -l <<< "$Result_2" )
+                [[ "$Count_Result" -gt 1 ]] && Result_3="$Result_2"
+                Result_4="${Result_4}"$'\n'"${Result_3}"
+            fi
+        done <<< $( awk '{print $1}'  $LINE )  
+    done <<< "$List_Files" 
+    #---------------------------------------------}
+    
+    reset
+    
+    echo "Path : Number of line"
+    echo " "
+    #echo "$Result_4" | sort | uniq
+    echo "$Result_4"
+}
+#==============}
+

@@ -3,8 +3,8 @@
 
 #   License:        GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
 #   Destiny:        For managing links from the web browser, like Firefox.
-    VERSION="Beta 13"
-#   Date:       04.2023
+    VERSION="Beta 12"
+#   Date:       11.2022
 #   Source:     https://github.com/tele1/LinuxScripts
 
 #   Script usage:       bash script_name
@@ -176,31 +176,51 @@ while true ; do
         DEBUG_1 "$PATH_OF_LINKS is a directory"
         FUNC_OPEN_PATHS
         [[ "$EDIT_FILE" == "1" ]] && NOTE="  Error: Before press e key, You need open file to edit. " && EDIT_FILE=0
-        [[ "$MOVE_LINK" == "1" ]] && NOTE="  Error: Before press m key, You need select link in file. " && MOVE_LINK=0
+#        [[ "$MOVE_LINK" == "1" ]] && NOTE="  Error: Before press m key, You need select link in file. " && MOVE_LINK=0
         [[ "$DELETE_LINK" == "1" ]] && NOTE="  Error: Before press m key, You need select link in file. " && DELETE_LINK=0
         Remember_Title=""
     elif [[ -f "$PATH_OF_LINKS" ]]; then
         DEBUG_1 "$PATH_OF_LINKS is a file"
         FUNC_OPEN_LINK 
         [[ "$EDIT_FILE" == "1" ]] && FUNC_EDIT_FILE && EDIT_FILE=0
-        [[ "$MOVE_LINK" == "1" ]] && FUNC_MOVE_LINK && MOVE_LINK=0
+#        [[ "$MOVE_LINK" == "1" ]] && FUNC_MOVE_LINK && MOVE_LINK=0
         [[ "$DELETE_LINK" == "1" ]] && FUNC_DELETE_LINK && DELETE_LINK=0
     else
         DEBUG_1 "$PATH_OF_LINKS is not valid"
         exit 1
     fi
-    
+
+
+    if [[ "$OPEN_MC" == "1" ]] ; then
+        OPEN_MC=0
+        mc "$PATH_OF_SCRIPT"/linki/  "$PATH_OF_SCRIPT"/linki/
+    fi
+
+
+    if [[ "$SEARCH_WITH_GREP" == "1" ]] ; then
+        SEARCH_WITH_GREP=0
+        reset
+        read -p "Write searched word with grep:  "  Searched_Word
+        echo " "
+        grep -rin --color "$Searched_Word" "$PATH_OF_SCRIPT"/linki/
+        echo " "
+        echo "Press spacebar to continue."
+        read -rN 1
+    fi
+
+    if [[ "$FIND_IDENTICAL" == "1" ]] ; then
+        FIND_IDENTICAL=0
+        FUNC_FIND_IDENTICAL
+        echo " "
+        echo "Press spacebar to continue."
+        read -rN 1
+    fi
+
     ## reset back
     BACK=0
 done
 
 echo "Error: End of script."
-
-
-
-
-
-
 
 
 

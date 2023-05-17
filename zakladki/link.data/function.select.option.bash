@@ -23,7 +23,7 @@ FUNCTION_select_option() {
     print_option()     { printf "%s\n" "   $1 "; }
     print_selected()   { printf "%s\n" "  ${ESC}[7m $1 ${ESC}[27m"; }
     get_cursor_row()   { IFS=';' read -sdR -p $'\E[6n' ROW COL; echo ${ROW#*[}; }            
-    get_pressed_key() {
+    get_pressed_key()  {
                         IFS= read -sn1 key 2>/dev/null >&2
 
                         read -sn1 -t 0.0001 k1
@@ -44,13 +44,13 @@ FUNCTION_select_option() {
                             $'\x1b\x5b\x44') key=left ;;
                             $'\x1b\x5b\x43') key=right ;;
 
-                            'a') key=add ;; 
+#                            'a') key=add ;; 
                             'd') key=delete ;;
                             'e') key=edit_file ;;
                             'g') key=grep_text ;; 
                             'h') key=help_menu ;;
-                            'i') key=import_html ;; 
-                            'm') key=move ;;
+#                           'i') key=import_html ;; 
+                            'm') key=mc ;;
                             'x') key=find_identical ;; 
                             
                         esac
@@ -69,12 +69,15 @@ FUNCTION_select_option() {
 #    local startrow=$(("$lastrow" - "$#"))
 
     # ensure cursor and input echoing back on upon a ctrl+c during read -s
-    trap "cursor_blink_on; stty echo; printf '\n'; exit" 2
+#    trap "cursor_blink_on; stty echo; printf '\n'; exit" 2
     cursor_blink_off
 
 
-    if [[ ! -z "$Remember_Title" ]] ; then
-         selected="$Remember_Title"
+    if [[ $RemoveFromLinePath == 1 ]] ; then
+        if [[ ! -z "$Line_Path" ]] ; then
+            # Show last number
+            selected=$( awk -F ';' '{print $NF}'  <<< "$Line_Path" )
+        fi
     else
         local selected=0
     fi
@@ -91,7 +94,14 @@ FUNCTION_select_option() {
         for opt; do
 
             if [ $idx -eq $selected ] ; then
-                print_selected "$opt"
+                print_selected "$opt" ; 
+                
+                if grep -q ^"./linki" <<< "$opt"  ; then
+                    File_Path="$opt"
+                    Old_File_Path="$File_Path"
+                else 
+                    File_Path="$Old_File_Path"
+                fi
                 
             else
             # We will limit displaying lines for example to 12
@@ -126,9 +136,30 @@ FUNCTION_select_option() {
         done
         
         ALL_OPTIONS="$idx"
+        #---------------------------------------------------{
         echo " "
         echo  "-------------------"
-        echo  "     $(($selected+1)) / $ALL_OPTIONS"
+        Selected_Line=$(($selected+1))
+        echo  "  Line:    $Selected_Line / $ALL_OPTIONS"
+        echo  "  File path: $File_Path "
+        
+        if [[ ! -z $Done_Line ]] ; then 
+            Line_Path=$(tr -d " " <<< "${Old_Line_Path};${Done_Line}")
+        fi 
+           
+        if [[ "$RemoveFromLinePath" == 1 ]] ; then
+            RemoveFromLinePath=0
+            # show all except last
+            if [[ ! -z ${Old_Line_Path} ]] ; then
+                Line_Path=$( awk 'BEGIN{FS=OFS=";"}{NF--; print}' <<< ${Old_Line_Path} )
+            fi
+        fi
+        
+        Old_Line_Path="$Line_Path"
+        Done_Line=""
+        ## This line for debug
+        #echo  "  Line path: $Line_Path "
+        #---------------------------------------------------}
 
         if [[ "$MOVE_LINK_LOCK" -eq 1 ]] ;then
             echo " "
@@ -139,6 +170,7 @@ FUNCTION_select_option() {
             NOTE=""
         fi
 
+        
 #       ----------------------------------------------
         # user key control
         case $(get_pressed_key) in
@@ -146,17 +178,17 @@ FUNCTION_select_option() {
             
             up)    ((selected--)) ; if [ $selected -lt 0 ]; then selected=$(($# - 1)); fi ;;
             down)  ((selected++)) ; if [ $selected -ge $# ]; then selected=0; fi ;;
-            right)     OPEN_LINK=1 ; Remember_Title="$selected" ; break ;;  # Forward
-            left)      BACK=1      ; Remember_Title=""          ; break ;;  # Backward
+            right)     OPEN_LINK=1 ; Done_Line=$selected ; break ;;  # Forward
+            left)      BACK=1      ; RemoveFromLinePath="1" ; break ;;  # Backward
            
 #            add) ADD=1 ; break ;;
             delete)  DELETE_LINK=1  ; break ;;
             edit_file) EDIT_FILE=1 ; BACK=1 ; break ;;
-#            grep_text) GREP=1 ; break ;;
+            grep_text) SEARCH_WITH_GREP=1 ; break ;;
             help_menu) HELP_MENU=1 ; BACK=1 ; break ;;
 #            import_html) IMPORT_HTML=1 ; BACK=1 ; break ;;
-#            move)      MOVE_LINK=1 ; BACK=1 ; break ;;
-#            find_identical) FIND_IDENTICAL=1 ; break ;;
+            mc)        OPEN_MC=1 ; BACK=1 ; break ;;
+            find_identical) FIND_IDENTICAL=1 ; break ;;
 
         esac
         
