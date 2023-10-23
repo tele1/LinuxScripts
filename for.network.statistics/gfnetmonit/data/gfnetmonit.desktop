@@ -1,0 +1,12 @@
+#  This script created for XDG_Autostart --> https://wiki.archlinux.org/title/XDG_Autostart
+
+[Desktop Entry]
+Version=1.0
+Name=gfnetmonit
+Categories=
+Terminal=false
+Type=Application
+Exec=/usr/bin/gfnetmonit
+StartupNotify=false
+NoDisplay=true
+Name[pl_PL]=gfnetmonit.desktop

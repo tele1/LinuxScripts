@@ -1,0 +1,58 @@
+#!/bin/bash
+
+
+
+
+#Files_lsof=$(ls /var/log/netmonit/*.lsof | xargs -n 1 basename)
+Files_lsof=$(ls -1 /var/log/netmonit/*.lsof)
+
+
+#============================================{
+##     Read data from *.lsof for yad window 
+while read -r COLUMN_1 ; do
+
+    Pid=$( basename "$COLUMN_1" )
+    ##      Read data from .lsof file
+    Proc_name=$( tail -n +2 "$COLUMN_1" | awk '{print $1 , $9}' )
+    Time_lsof=$( ls -l "$COLUMN_1" | awk '{print $8}' )
+    
+    if [[ -z "$Proc_name" ]] ; then
+        echo "Error: Proc_name variable is empty" ; exit 1
+    ##  elif more lines than 1
+    elif [[ $(grep "\S" <<< "$Proc_name" | wc -l) -gt 1 ]] ; then
+    
+        while read -r COL_1 ; do
+            Rest="$Rest $Pid $Time_lsof $COL_1"
+        done <<< "$Proc_name"
+        
+        Set1="$Set1 $Rest"
+    else
+        Set1="$Set1 $Pid $Time_lsof $Proc_name"
+    fi
+    
+done <<< "$Files_lsof"
+#============================================}
+
+
+while [[ ! "$Code_Out" == "1" ]] && [[ ! "$Code_Out" == "252" ]] ; do
+
+    Selected=$(yad --width=900 --height=400  --center --title "System Logout" \
+    --list --column="File"  --column="Time" --column="Name" --column="Connection" $Set1 \
+    --text "\n TIP: You can also select line and open lsof or pstree file. \n" \
+    --button="gtk-close":1 --button="Open .lsof":2 --button="Open .pstree":4)
+
+    Code_Out="$?"
+    ##      For Debug in terminal
+#    echo "$Selected $Code_Out" 
+
+    if [[ "$Code_Out" == "2" ]] ; then
+        File_lsof=$(awk -F '|' '{print $1}' <<< "$Selected")
+        xdg-open /var/log/netmonit/"$File_lsof"
+    elif [[ "$Code_Out" == "4" ]] ; then
+        File_pstree=$(awk -F '.' '{print $1".pstree"}'  <<< "$Selected")
+        xdg-open /var/log/netmonit/"$File_pstree"
+    fi
+    
+done
+
+

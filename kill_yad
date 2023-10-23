@@ -1,0 +1,15 @@
+#!/bin/bash
+
+
+
+##      Developed for Linux
+##      License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+        VERSION='1'
+##      Destiny: To yad apps
+##      Script usage: bash script_name
+
+##      Info:
+##            Generally, this script is not needed.
+##            Yad applications should work properly with the " quit " command
+#===============================================================
+ps aux | grep yad | grep "$1" | awk '{print $2}' | xargs kill

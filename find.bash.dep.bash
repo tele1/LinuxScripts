@@ -1,7 +1,7 @@
 #! /bin/bash 
 
 # Licence: GNU GPL v3  https://www.gnu.org/licenses/gpl-3.0.html
-  VERSION="8"
+  VERSION="9"
   SOURCE="https://github.com/tele1/LinuxScripts"
 # Destiny:      Script to find dependencies from *.bash and *.sh files
 # Script use:	Name_of_script --check /path/to/next/script
@@ -276,11 +276,26 @@ echo  "==============="
 
 echo " "
 MESSAGE_INFO "Example of the code for your shell script:"
+MESSAGE_INFO "+ bash template gratis."
+MESSAGE_INFO "###################################################################"
 echo " "
-
-echo "###########################}"
+echo " "
+echo '#!/bin/bash'
+echo " "
+echo "#==============================================================================={"
+echo "#     Description: <Edit> "
+echo "#     Destiny:    <Edit> "
+echo '     VERSION="<Edit>" '
+echo "#     Date:    $(date +"%Y.%m.%d") (Year.Month.Day) "
+echo "#     License:    <Edit> "
+echo "#     Source:    <Edit> "
+echo "#     Script usage: <Edit> "
+echo "#===============================================================================}"
+echo " "
+echo "#==============================================================================={"
 echo "# Check Dependecies - List created automatically by $0 version=${VERSION} "
 echo "# source=${SOURCE}"
+echo " "
 while IFS= read -r DEPEND ; do
     echo  "[[ -z \$(type -P "${DEPEND}") ]] && DEP=\"\$DEP\"$'\n'\"${DEPEND}\""
 done <<< "${LIST_OF_DEPEND_ALL}"
@@ -288,9 +303,11 @@ done <<< "${LIST_OF_DEPEND_ALL}"
 echo " "
 echo '# End script if exist any error'
 echo '[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}'
-echo "###########################}"
 echo " "
-echo  '#==============='
+echo "#     Used Packages: $(tr '\n' ',' <<< $LIST_ONLY_PACK)"
+echo "#==============================================================================={"
+echo " "
+MESSAGE_INFO "###################################################################"
 
 ## == Main information to show ==
 #################################}

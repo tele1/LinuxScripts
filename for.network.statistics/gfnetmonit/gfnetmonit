@@ -1,0 +1,66 @@
+#!/bin/bash
+
+
+######################################################}
+# Description: Graphical User Interface for " netmonit --catch-all-with-lsof "
+# Destiny: 
+#          For more comfortable use of netmonit logs.
+#
+	VERSION="1"
+#	Licence:	GNU GPL v3
+    SOURCE="https://github.com/tele1/LinuxScripts"
+# 	Script use:
+#               bash ./script --help
+#
+######################################################}
+
+
+###########################}
+# Check Dependecies - List created automatically by find.bash.dep.sh version=8 
+# source=https://github.com/tele1/LinuxScripts
+[[ -z $(type -P awk) ]] && DEP="$DEP"$'\n'"awk"
+[[ -z $(type -P basename) ]] && DEP="$DEP"$'\n'"basename"
+[[ -z $(type -P bash) ]] && DEP="$DEP"$'\n'"bash"
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P grep) ]] && DEP="$DEP"$'\n'"grep"
+[[ -z $(type -P ls) ]] && DEP="$DEP"$'\n'"ls"
+[[ -z $(type -P realpath) ]] && DEP="$DEP"$'\n'"realpath"
+[[ -z $(type -P tail) ]] && DEP="$DEP"$'\n'"tail"
+[[ -z $(type -P wc) ]] && DEP="$DEP"$'\n'"wc"
+[[ -z $(type -P yad) ]] && DEP="$DEP"$'\n'"yad"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+#     INFO: List of packages dependencies: 
+#   coreutils: /usr/bin/basename
+#   coreutils: /usr/bin/realpath
+#   coreutils: /usr/bin/tail
+#   coreutils: /usr/bin/wc
+#   gawk: /usr/bin/gawk
+#   yad: /usr/bin/yad 
+###########################}
+
+
+
+
+##  Relative Path needed for read other files from other place
+Relativ_Path="$(dirname "$(realpath $0)")"
+
+##      Menu in system tray icon
+Func_win1() {
+    ## option --seperator is for --menu
+    yad --title="Test_window" --notification --image="$System_Tray" --text "$0 : Right click to open menu" \
+    --command='echo "-Where are the river without water? -On the maps." ' \
+    --listen --menu="
+    List!bash ${Relativ_Path}/data/bin/win2
+    Logs!xdg-open /var/log/netmonit
+    Close This Window
+    Close App!quit" \
+    --separator="\\n" \
+    
+}
+
+
+System_Tray="gtk-yes"
+Func_win1
+
