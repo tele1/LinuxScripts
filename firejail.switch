@@ -1,13 +1,13 @@
 #!/bin/bash
 
-
-## Developed for Linux
-## License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-	VERSION='1'
-## Destiny: Enable / Disable Firejail
-## Script usage: bash script_name
-
-
+#=============================================================================={
+##   Destiny:   Developed for switch firejail in Linux
+	VERSION='2'
+##   Date:    2023.11.08 (Year.Month.Day)      
+##   License:   GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+##   Source:    https://github.com/tele1/LinuxScripts
+##   Script usage: bash script_name
+#==============================================================================}
 
 
 # 	TUTORIALS:	
@@ -18,9 +18,10 @@
 # reset ; locate icons | grep -E 'actions.*gtk'
 
 
-###########################}
-# Check Dependecies - List created automatically by find.bash.dep.sh version=8 
+#==============================================================================={
+# Check Dependecies - List created automatically by find.bash.dep.bash version=9 
 # source=https://github.com/tele1/LinuxScripts
+ 
 [[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
 [[ -z $(type -P firecfg) ]] && DEP="$DEP"$'\n'"firecfg"
 [[ -z $(type -P ls) ]] && DEP="$DEP"$'\n'"ls"
@@ -30,11 +31,13 @@
  
 # End script if exist any error
 [ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
-###########################}
+ 
+#     Used Packages: firejail,pkexec,yad,
+#==============================================================================={
 
 
 WINDOW_INFO() {
-	yad --image=info --title "Info" --text="$1" 
+	yad --center --image=info --title "Info" --text="$1" 
 }
 
 GET_STATUS() {
@@ -50,7 +53,8 @@ while true; do
 		TEXT_1="	Firejail is now Disabled"
 	fi
 
-	STATE=$(yad --width=450 --height=250 --title "Firejail Sanbox" --list  --text "Menu" --radiolist  \
+	STATE=$(yad --center --width=450 --height=250 --title "Firejail Sanbox" \
+	--list  --text "Menu" --radiolist  \
 	--column "Choose" \
 	--column "Option"  False "Disable Firejail"  False "Enable Firejail" False "Check Status" \
 	--text="	\n	$TEXT_1	\n	" \
