@@ -8,16 +8,21 @@
 # Destiny: 
 #          For more comfortable check ISO
 #
-	VERSION="2"
+	VERSION="3"
 #	Licence:	GNU GPL v3
     SOURCE="https://github.com/tele1/LinuxScripts"
 # 	Script use:
-#               First, download the ISO file and hash file from the Internet
+#               First, download the ISO file and checksum file from the Internet
 #               and move it to an empty folder.
-#               Warning: You can check only 1 ISO file.
-#               then use command:
+#               The checksum file should contain: the checksum and the name of the ISO file.
+#               The name of the checksum file should contain the appropriate extension
+#               for example for md5: hash.md5
+#      Warning: You can check only folder with 1 ISO file.
+#               Then use command:
 #                   bash check.iso.bash -p $HOME/YourPath
 #
+#   Default User Interface
+Gui=on
 ###############################################################################}
 
 ###########################{
@@ -45,10 +50,6 @@
 #   https://linuxexplore.com/2013/01/01/how-to-find-usb-device-in-linux/
 #   http://smokey01.com/yad/
 
-###################{
-#   Default User Interface
-Gui=on
-###################}
 
 #   Colors
 #-------------------------{
