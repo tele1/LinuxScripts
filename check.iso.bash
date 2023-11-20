@@ -8,12 +8,13 @@
 # Destiny: 
 #          For more comfortable check ISO
 #
-	VERSION="1"
+	VERSION="2"
 #	Licence:	GNU GPL v3
     SOURCE="https://github.com/tele1/LinuxScripts"
 # 	Script use:
 #               First, download the ISO file and hash file from the Internet
 #               and move it to an empty folder.
+#               Warning: You can check only 1 ISO file.
 #               then use command:
 #                   bash check.iso.bash -p $HOME/YourPath
 #
@@ -43,6 +44,11 @@
 #   https://wiki.manjaro.org/index.php/Burn_an_ISO_File
 #   https://linuxexplore.com/2013/01/01/how-to-find-usb-device-in-linux/
 #   http://smokey01.com/yad/
+
+###################{
+#   Default User Interface
+Gui=on
+###################}
 
 #   Colors
 #-------------------------{
@@ -107,7 +113,8 @@ for File in $(find "$Folder_Selected" -type f | sed 's|^\./||') ; do
     Extension=$(awk -F'.' '{print $NF}' <<< "$File")
     case "$Extension" in
     'iso') echo "File iso = $File"
-           Iso_File="$File"
+#           Iso_File="$File"
+           Iso_File="$Iso_File"$'\n'"$File"
     ;;
     'md5'|'md5sum') echo "File md5 = $File"
         Func_Switch "md5sum -c $File"
@@ -133,6 +140,13 @@ done
 Count_U_Files=$(grep "\S" <<< "$UnknowFiles" | wc -l)
     if [[ ! -z "$Count_U_Files" ]] ;then
         echo "Unknown files: $Count_U_Files"
+    fi
+
+Count_Iso_Files=$(grep "\S" <<< "$Iso_File" | wc -l)
+    if [[ -z "$Count_Iso_Files" ]] ; then
+        echo "Error: Not found any ISO file." ; exit 1
+    elif [[ "$Count_Iso_Files" -gt "1" ]] ; then
+        echo "Error: Too many ISO files: $Count_Iso_Files" ; exit 1
     fi
 
 echo " "
@@ -181,7 +195,8 @@ while (($#)) ; do
 	    echo "                      Verify a Linux ISO's Checksum is enabled by default"
 	    echo "                      You cannot use arguments -a and -i at the same time"
 	    echo "--ignore  | -i    = Ignore verification (md5-sha)."
-	    echo "--gui  | -g       = Graphical user interface."	     
+	    echo "--gui  | -g       = Graphical user interface."
+	    echo "--term | -t       = Terminal user interface."	     	     
 	    echo "--path | -p       = Path to dir with files (iso, md5-sha)."
 	    echo "                      Useful if the command is run in a different"
 	    echo "                      place than the files are located"
@@ -198,6 +213,9 @@ while (($#)) ; do
 	;;
 	"--gui"|"-g")
 	    Gui=on
+	;;
+	"--term"|"-t")
+	    Gui=off
 	;;
     "--path"|"-p")
 	    Folder_Selected="$2"
