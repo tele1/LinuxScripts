@@ -26,8 +26,8 @@ Some improvements have been made for better readability.
 
         source lib-your-library-name.bash
 
-    I recommend a more reliable method:
-    (At least until Bash will improved.)
+I recommend a more reliable method:
+(At least until Bash will improved.)
 
         #=================================={
         #--------------------------{
