@@ -1,0 +1,89 @@
+#!/bin/bash
+
+
+# Developed only for Linux Mint  20.1 Ulyssa
+# For own use.
+
+# License:		GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+# Version		1
+# Destiny:		Script to check whether unnecessary packages are installed.
+#               The package list is created to my needs. 
+#			    I am not responsible for other people's needs.
+# Script usage:		bash script
+
+##	LINKS:
+##  awk colors: awk: warning: escape sequence `\e' treated as plain `e'
+##  https://stackoverflow.com/questions/14482101/awk-adding-color-code-to-text
+
+
+LIST='lirc
+speech-dispatcher-audio-plugins
+'
+
+## related to the internet:
+#network-manager-config-connectivity-ubuntu
+#apport
+#update-notifier
+#		python3-popcon  ?		https://popcon.ubuntu.com/
+#popularity-contest
+#hw-probe		https://linux-hardware.org/
+
+###########################}
+# Check Dependecies - List is not created automatically
+[[ -z $(type -P apt) ]] && DEP="$DEP"$'\n'"apt"
+[[ -z $(type -P awk) ]] && DEP="$DEP"$'\n'"awk"
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P grep) ]] && DEP="$DEP"$'\n'"grep"
+[[ -z $(type -P sort) ]] && DEP="$DEP"$'\n'"sort"
+[[ -z $(type -P uniq) ]] && DEP="$DEP"$'\n'"uniq"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+###########################}
+
+
+
+NC='\e[0m'    # Reset Color
+GN='\e[0;32m' # Green ECHO
+CN='\e[0;36m' # Cyan ECHO
+
+GREEN_ECHO() {
+    echo -e "${GN} $1 ${NC}"
+}
+
+CYAN_ECHO() {
+    echo -e "${CN} $1 ${NC}"
+}
+
+#	Display repeats 
+REPEATS=$( sort <<< "$LIST" | uniq -d)
+if [ ! -z "$REPEATS" ] ; then
+	echo "Warning: The package names are repeated in the list:"
+	echo "$REPEATS"
+	echo "==========="
+fi
+
+
+INSTALLED=$(apt list --installed | sed '1d' | tr ' ' '/' | awk -F '/' '{print $1 "  " "(" $4 ")"}')
+
+GREEN_ECHO "PACKAGE --> FOUND INSTALLED	:ARCHITECTURE"
+while read LINE ; do
+	if $(grep -q "$LINE" <<< "$INSTALLED") ; then
+		LIST_INSTALLED_2=$(grep "$LINE" <<< "$INSTALLED")
+		while read LINE_2 ; do
+			ONLY_NAME=$(awk -F ' ' '{print $1}' <<< "$LINE_2")
+			if [[ "$LINE" == "$ONLY_NAME" ]] ; then
+				##	echo something | awk '{ print "\033[34m"$1" in colour \033[0m";}'
+				COLORED=$(echo "$LINE --> $LINE_2" | awk -F ' '  '{print $1 "	" $2  " " "\33[36m" $3 "\033[0m"  " " $4 ;}')
+				echo -e "$COLORED"
+				#echo "$LINE 	--> $LINE_2"
+			fi
+		done <<< "$LIST_INSTALLED_2"
+	fi
+done <<< "$LIST"
+
+
+
+
+
+

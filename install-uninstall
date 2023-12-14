@@ -1,0 +1,225 @@
+#!/bin/bash
+
+
+#=============================================================================={
+##   Destiny:  A universal script for installing and uninstalling other scripts.
+     VERSION="1" 
+##    Date:       2023.11.30 (Year.Month.Day) 
+##    License:    GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
+##    Source:     https://github.com/tele1/LinuxScripts
+##    Script usage:    bash install-uninstall -i file_or_folder_name
+#==============================================================================}
+
+
+
+
+# Problemy Ubuntu 22.04.3 LTS
+# rm -rv /opt/"$File_name"
+# Usunelo wszystko + katalog opt
+# + pokazuje nieprawidłowe pliki z /opt gdy /opt jest usunięty '( :-( )'
+
+# Remove if empty /etc/install-uninstall
+
+##  Relative Path needed for read other files from other place
+Relativ_Path="$(dirname "$(realpath $0)")"
+
+
+function_check_i() {
+# Check if dir or file exist
+    # "Element" is here default also for reset this variable
+    Element="dir"
+    if [[ -z "$1" ]] ; then
+        echo "Error: You forgot to provide the path to the file or folder." ; exit 1
+    elif [ ! -d "$1" ]; then
+        if [ ! -f "$1" ]; then
+            echo "Error: This folder or file not found: $1"
+            exit 1  
+        fi
+        Element="file"
+    fi
+    
+# Check if is installed in /opt/ and in /usr/bin/
+    if [[ "$Element" == "file" ]] ; then
+        if [[ -f "/opt/${File_name}" ]] || [[ -f "/usr/bin/${File_name}" ]]; then
+            echo "Error: File was installed in /opt/ or in /usr/bin/, program closing." ; exit 1
+        fi
+    elif [[ "$Element" == "dir" ]] ; then
+        if [[ -d "/opt/${File_name}" ]] ; then
+            echo "Error: Dir was installed in /opt/ , program closing." ; exit 1
+        fi
+    fi
+}
+
+#======================================{
+function_install() {
+    File_name=$(basename "$Selected")
+    function_check_i "$Selected"
+    
+    # Ask
+    echo " "
+    echo "--> Do you want install $Element ?"
+    echo "  /opt/${Selected}"
+    read -rsN1 -p " Click y = yes or n = no " Choice
+    echo " "
+    case "$Choice" in
+        "yes"|"y") echo "You chose yes"
+        ;;
+        "no"|"n") echo "You chose no, program closing." ; exit 1
+        ;;
+        *) echo "--> Incorrect character, program closing." ; exit 1
+        ;;
+    esac
+    
+    echo " "
+    echo "--> Installation $Element In Progress ..."
+    
+        Function_root_i() {
+            # Declare for root
+            Selected="$1"
+            File_name=$(basename "$Selected")
+            # Copy source code
+            Cp_Output=$(cp -vr $Selected /opt/)
+                Cp_Status="$?"
+            chmod -R 755 /opt/${File_name}
+            # Save to log and to the list
+#            tee "/var/log/install-uninstall.log" <<< "$Cp_Output"
+            mkdir -p "/etc/install-uninstall" 
+#            echo "/etc/install-uninstall/${File_name}" > /etc/install-uninstall/${File_name}
+            Installed_Files=$(awk '{print $3}' <<< "$Cp_Output" >> "/etc/install-uninstall/${File_name}")
+            echo "$Cp_Output"
+                # We return to $Cp_Status
+                if [[ ! "$Cp_Status" == 0 ]] ;then
+                    echo " "
+                    echo "Error: The copy contains errors, "
+                    echo " please check output or /var/log/install-uninstall.log"
+                    exit 1 
+                fi
+        }
+        
+    if uname -a | grep -iq ubuntu ; then
+        sudo bash -c "$(declare -f Function_root_i) ; Function_root_i $Selected"
+        Sudo_Status="$?"
+    else
+        su root -c "$(declare -f Function_root_i) ; Function_root_i $Selected"
+        Su_Status="$?"
+    fi
+        if [[ "$Sudo_Status" == 1 ]] || [[ "$Su_Status" == 1 ]] ; then
+            echo "Error: From command running with sudo or su."
+            exit 1
+        fi
+    echo " "
+    echo "--> Installation Finished."
+}
+#======================================}
+
+
+#=================================={
+function_uninstall() {
+    File_name=$(basename "$Selected")
+    
+    if [[ -z "$File_name" ]] ; then
+        echo "Error: File_name is empty." ; exit 1
+    fi
+    # Check if file exist in list
+    if ! grep -q "$Selected" <<< "$(ls -1 /etc/install-uninstall/)" ; then
+        echo "Error: Selected $Selected not found file name in list."
+        exit 1
+    fi
+    
+    echo " "
+    echo "--> Uninstallation File In Progress ..."
+    
+    Function_root_u() {
+        # Declare for root
+        Selected="$1"
+        File_name=$(basename "$Selected")
+            if [[ -z "$File_name" ]] ; then
+                echo "Error: File_name is empty." ; exit 1
+            fi
+        # Remove
+        Rm_Output=$(rm -rv /opt/"$File_name")
+
+        #Rm_Output=$(tac "/etc/install-uninstall/${File_name}" | xargs  rm -v)
+        Rm_Status="$?"
+            echo "$Rm_Output" | tee /var/log/install-uninstall.log
+            if [[ ! "$Rm_Status" == 0 ]] ; then
+                echo " "
+                echo "Error: Removing contains errors, "
+                echo " please check output or /var/log/install-uninstall.log"
+                exit 1
+            fi
+        rm -v "/etc/install-uninstall/${File_name}"
+    }
+    
+    if uname -a | grep -iq ubuntu ; then
+        sudo bash -c "$(declare -f Function_root_u) ; Function_root_u $Selected"
+        Sudo_Status="$?"
+    else
+        su root -c "$(declare -f Function_root_u) ; Function_root_u $Selected"
+        Su_Status="$?"
+    fi
+
+        if [[ "$Sudo_Status" == 1 ]] || [[ "$Su_Status" == 1 ]] ; then
+            echo "Error: From command running with sudo or su."
+            exit 1
+        fi
+
+    echo " "
+    echo "--> Uninstallation Finished."
+}
+#==================================}
+
+
+##========================================={
+## Options
+if [[ "$#" == "0" ]] ; then
+    set -- "-h"
+fi
+
+while (($#)) ; do
+    case $1 in
+	    "--help"|"-h"|"")
+	        echo " Options:"
+	        echo " --install           -i        Install script."
+	        echo " --uninstall         -u        Uninstall script."
+	        echo " --list              -l        List installed dirs or files."
+	        echo " --help              -h        Show this help."
+	        echo " "
+	        echo "Example:"
+	        echo "  $0 -i  $HOME/Downloads"
+	        echo "  $0 -u  $HOME/uninstall.name.txt"
+	        exit 0
+	    ;;
+	    "--install"|"-i")
+	        Selected="$2"
+            if [[ -z "$Selected" ]] ; then
+                echo "Error: Selected path or name is empty." ; exit 1
+            fi
+	        function_install
+	        shift
+	    ;;
+	    "--uninstall"|"-u")
+	        Selected="$2"
+            if [[ -z "$Selected" ]] ; then
+                echo "Error: Selected name is empty." ; exit 1
+            fi
+	        function_uninstall
+	        shift
+	    ;;
+	    "--list"|"-l")
+            Count_installed=$(ls -1 /etc/install-uninstall/ | wc -l)
+            if [[ "$Count_installed" == 0 ]] ; then
+                echo "You don't have installed own packages, /etc/install-uninstall/ is empty."
+            else
+                ls -1 /etc/install-uninstall/
+            fi
+	    ;;
+	    *)
+	        echo "Error: Wrong option: $1"
+	        echo "Use --help or -h for help."
+	        exit 1
+	    ;; 
+    esac
+    shift
+done
+##=========================================}
