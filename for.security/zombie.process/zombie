@@ -1,0 +1,51 @@
+#!/bin/bash
+
+
+#=============================================================================={
+##    Destiny:    To create zombie process 
+     VERSION="1" 
+##    Date:       2023.12.17 (Year.Month.Day) 
+##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
+##    Source:   https://github.com/tele1/LinuxScripts 
+##    Script usage:   bash script_name 
+#==============================================================================}
+ 
+#=============================================================================={
+# Check Dependecies - List created automatically by find-bash-dep version=10 
+# source=https://github.com/tele1/LinuxScripts
+ 
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P sleep) ]] && DEP="$DEP"$'\n'"sleep"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+ 
+#     Used Packages:
+#=============================================================================={
+
+
+# We can change time
+Zombie_Time="1000"
+
+F_Timer() {
+    echo "  Zombie will $Zombie_Time seconds"
+    Numb=1; while [[ "$Numb" -le "$Zombie_Time" ]];  do 
+        echo "Time: $Numb "
+        Numb=$["$Numb" + 1]
+        sleep 1
+    done
+}
+
+F_example_1() {
+    (sleep 1 & F_Timer & exec /bin/sleep "$Zombie_Time") 
+}
+
+
+F_example_2() {
+    (: & exec sleep "$Zombie_Time") &
+    F_Timer
+    wait
+}
+
+# We will create zombie process
+F_example_2 & F_example_2

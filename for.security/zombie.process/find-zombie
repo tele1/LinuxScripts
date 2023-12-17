@@ -1,0 +1,55 @@
+#!/bin/bash
+
+ 
+#=============================================================================={
+##    Destiny:    To find zombie process 
+     VERSION="1" 
+##    Date:       2023.12.17 (Year.Month.Day) 
+##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
+##    Source:   https://github.com/tele1/LinuxScripts 
+##    Script usage:   bash script_name 
+#==============================================================================}
+ 
+#=============================================================================={
+# Check Dependecies - List created automatically by find-bash-dep version=10 
+# source=https://github.com/tele1/LinuxScripts
+ 
+[[ -z $(type -P awk) ]] && DEP="$DEP"$'\n'"awk"
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P egrep) ]] && DEP="$DEP"$'\n'"egrep"
+[[ -z $(type -P grep) ]] && DEP="$DEP"$'\n'"grep"
+[[ -z $(type -P ps) ]] && DEP="$DEP"$'\n'"ps"
+[[ -z $(type -P pstree) ]] && DEP="$DEP"$'\n'"pstree"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+ 
+#     Used Packages: gawk,psmisc,
+#=============================================================================={
+
+
+Lines=$(ps aux | awk '$8 ~ /^[Zz]/')
+
+if [[ ! -z "$Lines" ]] ; then
+    ps aux | egrep "Z|defunct" | grep -v 'grep' 
+else
+    echo "    Zombie process not found." ; exit 0
+fi
+
+
+echo "------------------------"
+
+
+PIDs=$(ps aux | awk '{print $8 , $2}' | grep -w Z | awk '{print $2}')
+
+if [[ ! -z "$PIDs" ]] ; then
+    awk '{print "PIDs = " $1}' <<< "$PIDs"
+    while read -r Column_1 ; do
+        echo "-------{"
+        # in older of pstree, if pstree not found pid then you will see full tree
+        pstree -psSaglt "$Column_1"
+        echo "-------}"
+    done <<< "$PIDs"
+fi 
+    
+

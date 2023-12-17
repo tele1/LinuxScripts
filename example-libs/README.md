@@ -24,28 +24,32 @@ Some improvements have been made for better readability.
 
 ####    5.1 In default we load library that way:
 
-        source lib-your-library-name.bash
+        source lib/lib-your-library-name.bash
+
+( note that I store the libraries close to the script in the ./lib folder )
 
 I recommend a more reliable method:
 (At least until Bash will improved.)
 
         #=================================={
+        Path_Of_Script="$(dirname "$(realpath $0)")"
+        
         #--------------------------{
         ##  Safeguard
         Source_If_Exist() {
             if [[ -f "$1" ]] ; then
-                source "$1"
+                source "${Path_Of_Script}/lib/${1}"
             else
-                echo "Error: Source not found: $1"
+                echo "Error: Source not found: $1" 1>&2
                 exit 1
             fi
         }
         #--------------------------}
-
-        Path_Of_Script="$(dirname "$(realpath $0)")"
-        Source_If_Exist "$Path_Of_Script"/lib/lib-1-basic-messages.bash
-        Source_If_Exist "$Path_Of_Script"/lib/lib-your-library-name.bash
+        
+        Source_If_Exist lib-1-basic-messages.bash
+        Source_If_Exist lib-your-library-name.bash
         #==================================}
+
 
 Advantages of this way:
 

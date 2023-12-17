@@ -3,7 +3,7 @@
 
 #=============================================================================={
 ##    Destiny:  This will color your text message.
-##    Version="1" 
+##    Version="2" 
 ##    Date:       2023.11.30 (Year.Month.Day) 
 ##    License:    GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
 ##    Source:     https://github.com/tele1/LinuxScripts
@@ -79,7 +79,7 @@ readonly Lt_Bkgd_White='107'
 #---------------------------------------------------}
 
 #---------------------------------------------------------{
-# Example:  F_Cl_Info "Your_Text"
+# Example:  F_Green_Info "Your_Text"
 F_Green_Info() {
     echo -e "\e[1;32m  Info: ${1} ${Reset_Color}"
 }

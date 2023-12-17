@@ -1,0 +1,61 @@
+#!/bin/bash
+
+ 
+#=============================================================================={
+##    Destiny:    To kill zombie process  
+     VERSION="1" 
+##    Date:       2023.12.17 (Year.Month.Day) 
+##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
+##    Source:   https://github.com/tele1/LinuxScripts 
+##    Script usage:   bash script_name 
+#==============================================================================}
+ 
+#=============================================================================={
+# Check Dependecies - List created automatically by find-bash-dep version=10 
+# source=https://github.com/tele1/LinuxScripts
+ 
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P kill) ]] && DEP="$DEP"$'\n'"kill"
+[[ -z $(type -P ps) ]] && DEP="$DEP"$'\n'"ps"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+ 
+#     Used Packages: 
+#=============================================================================={
+
+
+#pkill <name>
+#-or-
+#killall <name>
+
+# If the process hung up,
+#pkill -9 <name>
+
+
+#kill -HUP $(ps -A -ostat,ppid | awk '/[zZ]/ { print $2 }')
+
+#================
+F_Find_Zobies() {
+    PIDs=$(ps -A -ostat,ppid | awk '/[zZ]/ && !a[$2]++ {print $2}')
+}
+
+F_Find_Zobies
+if [[ ! -z "$PIDs" ]] ; then
+    echo "We will try kill zombies: $PIDs"
+    while read -r Column_1 ; do
+        kill "$Column_1"
+    done <<< "$PIDs"
+    F_Find_Zobies
+    if [[ ! -z "$PIDs" ]] ; then
+        echo "Zombies still exist: $PIDs"
+    else
+        echo "Success, zombies do not exist."
+    fi
+else
+    echo "Zombies not found."
+fi
+
+
+
+
