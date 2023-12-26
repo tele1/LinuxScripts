@@ -3,7 +3,7 @@
 
 ##      Developed for Linux
 ##      License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-        VERSION='beta 2'
+        VERSION='beta 3'
 ##      Destiny: To show how many packages do you have installed
 ##      Script usage: bash script_name
 
@@ -28,6 +28,9 @@ echo "=================="
 [[ ! -z $(type -P pip) ]] && PIP=$(pip list | wc -l) && echo "pip = $PIP"
 
 [[ ! -z $(type -P npm) ]] && NPM=$(npm ls --parseable | grep -v '/home' | wc -l) && echo "npm = $NPM"
+
+#  JavaScript package manager , alternative to the npm
+[[ ! -z $(type -P yarn) ]] && Yarn=$(yarn global list | wc -l) && echo "yarn = $Yarn"
 
 #  For Rust
 [[ ! -z $(type -P cargo) ]] && Cargo=$(cargo  --list | wc -l) && echo "cargo = $Cargo"
