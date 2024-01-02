@@ -3,40 +3,37 @@
 
 ##      Developed for Linux
 ##      License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-        VERSION='beta 3'
+        VERSION='beta 4'
 ##      Destiny: To show how many packages do you have installed
 ##      Script usage: bash script_name
 
 
-##==================================={
+#--------------------------{
+##  Info: Sometimes it happens that applications are installed from 
+##      a second shell that has its own settings, e.g. ROOT_PREFIX.
+##      ( I seen this in some application for miniconda settings)
+##      This means that additional applications can only be
+##       visible from this second shell.
+
 
 echo "Installed packages:"
 echo "=================="
 
+#  For Fedora
 [[ ! -z $(type -P dnf) ]] && DNF=$(dnf list installed | wc -l) && echo "dnf = $DNF"
 
-[[ ! -z $(type -P flatpac) ]] && FLAT=$(flatpak list --runtime | wc -l) && echo "flatpak = $FLAT"
-
-[[ ! -z $(type -P snap) ]] && SNAP=$(snap list | sed '1d' | wc -l) && echo "snap = $SNAP"
-
+#  For based on Debian 
 [[ ! -z $(type -P apt) ]] && APT=$(apt list --installed 2>/dev/null | sed '1d' | wc -l) && echo "apt = $APT"
 
+#  For based on Arch Linux
 [[ ! -z $(type -P pacman) ]] && PAC=$(pacman -Qn | wc -l) && echo "pacman = $PAC"
 
 [[ ! -z $(type -P pacman) ]] && AUR=$(pacman -Qm | wc -l) && echo "AUR = $AUR"
 
-[[ ! -z $(type -P pip) ]] && PIP=$(pip list | wc -l) && echo "pip = $PIP"
-
-[[ ! -z $(type -P npm) ]] && NPM=$(npm ls --parseable | grep -v '/home' | wc -l) && echo "npm = $NPM"
-
-#  JavaScript package manager , alternative to the npm
-[[ ! -z $(type -P yarn) ]] && Yarn=$(yarn global list | wc -l) && echo "yarn = $Yarn"
-
-#  For Rust
-[[ ! -z $(type -P cargo) ]] && Cargo=$(cargo  --list | wc -l) && echo "cargo = $Cargo"
-
+#  For example: Fedora, OpenSuse
 [[ ! -z $(type -P rpm) ]] && RPM=$(rpm -qa | wc -l) && echo "rpm = $RPM"
 
+#  For based on Slackware
 [[ ! -z $(type -P slapt-get) ]] && Slackware=$(slapt-get --installed | wc -l) && echo "Slackware = $Slackware"
 
 #  For FreeBSD
@@ -48,5 +45,27 @@ echo "=================="
 # For Cygwin
 [[ ! -z $(type -P cygcheck) ]] && Cygcheck=$(cygcheck --check-setup --dump-only * | wc -l) && echo "cygcheck = $Cygcheck"
 
+[[ ! -z $(type -P flatpac) ]] && FLAT=$(flatpak list --runtime | wc -l) && echo "flatpak = $FLAT"
+
+[[ ! -z $(type -P snap) ]] && SNAP=$(snap list | sed '1d' | wc -l) && echo "snap = $SNAP"
+
+[[ ! -z $(type -P pip) ]] && PIP=$(pip list | wc -l) && echo "pip = $PIP"
+
+[[ ! -z $(type -P npm) ]] && NPM=$(npm ls --parseable | grep -v '/home' | wc -l) && echo "npm = $NPM"
+
+#  JavaScript package manager , alternative to the npm
+[[ ! -z $(type -P yarn) ]] && Yarn=$(yarn global list | wc -l) && echo "yarn = $Yarn"
+
+#  For Rust
+[[ ! -z $(type -P cargo) ]] && Cargo=$(cargo  --list | wc -l) && echo "cargo = $Cargo"
+
+# Anaconda, conda, miniconda, 
+[[ ! -z $(type -P conda) ]] && Conda=$(conda list | grep -v ^'#' | wc -l) && echo "conda = $Conda"
+
+#--------------------------}
+
+#-------------------------------{
 echo " "
-echo "Number of all commands: $(compgen -c | wc -l) "
+echo " Number of all commands: $(compgen -c | wc -l) "
+#-------------------------------}
+
