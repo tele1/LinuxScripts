@@ -3,12 +3,12 @@
 
 ##      Developed for Linux
 ##      License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-        VERSION='1'
+        VERSION='2'
 ##      Destiny: To show how many packages do you have installed
 ##      Script usage: bash script_name
 
 
-#--------------------------{
+##============================
 ##  Info: Sometimes it happens that applications are installed from 
 ##      a second shell that has its own settings, e.g. ROOT_PREFIX.
 ##      ( I seen this in some application for miniconda settings)
@@ -18,6 +18,9 @@
 
 echo "Installed packages:"
 echo "=================="
+
+#------------------------{
+##   System managers:
 
 #  For Fedora
 [[ ! -z $(type -P dnf) ]] && DNF=$(dnf list installed | wc -l) && echo "dnf = $DNF"
@@ -45,9 +48,23 @@ echo "=================="
 # For Cygwin
 [[ ! -z $(type -P cygcheck) ]] && Cygcheck=$(cygcheck --check-setup --dump-only * | wc -l) && echo "cygcheck = $Cygcheck"
 
+#------------------------}
+
+#---------------------------------{
+##   Portable package managers:
+
 [[ ! -z $(type -P flatpac) ]] && FLAT=$(flatpak list --runtime | wc -l) && echo "flatpak = $FLAT"
 
 [[ ! -z $(type -P snap) ]] && SNAP=$(snap list | sed '1d' | wc -l) && echo "snap = $SNAP"
+
+# alpha command to test
+Count_AppImages=$(locate "AppImage.config" | grep "config"$ | wc -l)
+[[ "$Count_AppImages" -ge "1" ]] && echo "AppImages = $Count_AppImages"
+
+#---------------------------------}
+
+#--------------------------------------{
+##   Other package managers:
 
 [[ ! -z $(type -P pip) ]] && PIP=$(pip list | wc -l) && echo "pip = $PIP"
 
@@ -62,10 +79,7 @@ echo "=================="
 # Anaconda, conda, miniconda, 
 [[ ! -z $(type -P conda) ]] && Conda=$(conda list | grep -v ^'#' | wc -l) && echo "conda = $Conda"
 
-# alpha command to test
-Count_AppImages=$(locate "AppImage.config" | grep "config"$ | wc -l)
-[[ "$Count_AppImages" -ge "1" ]] && echo "AppImages = $Count_AppImages"
-#--------------------------}
+#--------------------------------------}
 
 #-------------------------------{
 echo " "
