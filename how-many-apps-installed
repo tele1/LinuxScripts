@@ -3,7 +3,7 @@
 
 ##      Developed for Linux
 ##      License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-        VERSION='beta 4'
+        VERSION='1'
 ##      Destiny: To show how many packages do you have installed
 ##      Script usage: bash script_name
 
@@ -62,6 +62,9 @@ echo "=================="
 # Anaconda, conda, miniconda, 
 [[ ! -z $(type -P conda) ]] && Conda=$(conda list | grep -v ^'#' | wc -l) && echo "conda = $Conda"
 
+# alpha command to test
+Count_AppImages=$(locate "AppImage.config" | grep "config"$ | wc -l)
+[[ "$Count_AppImages" -ge "1" ]] && echo "AppImages = $Count_AppImages"
 #--------------------------}
 
 #-------------------------------{
