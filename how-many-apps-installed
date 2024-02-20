@@ -3,7 +3,7 @@
 
 ##      Developed for Linux
 ##      License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-        VERSION='2'
+        VERSION='4'
 ##      Destiny: To show how many packages do you have installed
 ##      Script usage: bash script_name
 
@@ -53,7 +53,7 @@ echo "=================="
 #---------------------------------{
 ##   Portable package managers:
 
-[[ ! -z $(type -P flatpac) ]] && FLAT=$(flatpak list --runtime | wc -l) && echo "flatpak = $FLAT"
+[[ ! -z $(type -P flatpak) ]] && FLAT=$(flatpak list --runtime | wc -l) && echo "flatpak = $FLAT"
 
 [[ ! -z $(type -P snap) ]] && SNAP=$(snap list | sed '1d' | wc -l) && echo "snap = $SNAP"
 
@@ -79,6 +79,14 @@ Count_AppImages=$(locate "AppImage.config" | grep "config"$ | wc -l)
 # Anaconda, conda, miniconda, 
 [[ ! -z $(type -P conda) ]] && Conda=$(conda list | grep -v ^'#' | wc -l) && echo "conda = $Conda"
 
+# asdf is a CLI tool that can manage multiple language runtime versions
+[[ ! -z $(type -P asdf) ]] && Asdf=$(asdf latest --all | wc -l) && && echo "asdf = $Asdf"
+
+
+[[ ! -z $(type -P postinstallerf) ]] && echo "postinstallerf = app with GUI"
+
+# Alternative for Ubuntu Software Center
+[[ ! -z $(type -P appgrid) ]] && echo "appgrid = app with GUI"
 #--------------------------------------}
 
 #-------------------------------{
