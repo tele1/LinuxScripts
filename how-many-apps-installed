@@ -3,7 +3,7 @@
 
 ##      Developed for Linux
 ##      License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-        VERSION='4'
+        VERSION='5'
 ##      Destiny: To show how many packages do you have installed
 ##      Script usage: bash script_name
 
@@ -14,7 +14,7 @@
 ##      ( I seen this in some application for miniconda settings)
 ##      This means that additional applications can only be
 ##       visible from this second shell.
-
+# https://github.com/sigoden/upt
 
 echo "Installed packages:"
 echo "=================="
@@ -87,6 +87,9 @@ Count_AppImages=$(locate "AppImage.config" | grep "config"$ | wc -l)
 
 # Alternative for Ubuntu Software Center
 [[ ! -z $(type -P appgrid) ]] && echo "appgrid = app with GUI"
+
+# UPT - Universal Package-management Tool
+[[ ! -z $(type -P upt) ]] && Upt=$(upt list | wc -l) && && echo "upt = $Upt"
 #--------------------------------------}
 
 #-------------------------------{

@@ -1,0 +1,60 @@
+#!/bin/bash
+
+
+#=============================================================================={
+##    Destiny:    An unofficial attempt to improve the lsmod application. 
+     VERSION="1" 
+##    Date:       2024.03.27 (Year.Month.Day) 
+##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
+##    Source:   https://github.com/tele1/LinuxScripts
+##    Script usage:   bash lsmod2 --help
+#==============================================================================}
+ 
+#=============================================================================={
+# Check Dependecies - List created automatically by find-bash-dep version=10 
+# source=https://github.com/tele1/LinuxScripts
+ 
+[[ -z $(type -P awk) ]] && DEP="$DEP"$'\n'"awk"
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P find) ]] && DEP="$DEP"$'\n'"find"
+[[ -z $(type -P grep) ]] && DEP="$DEP"$'\n'"grep"
+[[ -z $(type -P lsmod) ]] && DEP="$DEP"$'\n'"lsmod"
+[[ -z $(type -P uname) ]] && DEP="$DEP"$'\n'"uname"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+ 
+#     Used Packages: findutils,gawk,
+#=============================================================================={
+
+
+case "$1" in
+    "-h"|"--help")
+        echo "  This is help:"
+        echo ""
+        echo "  -a  - List all drivers in system"
+        echo ""
+        echo "  -l  - List loaded drivers"
+        echo ""
+        echo "  -lv - List loaded drivers with details"
+        echo ""
+        echo "  -b  - List drivers in blacklist"
+        echo ""
+        ;;
+    -a) # List all drivers in system
+        find /lib/modules/$(uname -r) -type f -name '*.ko'
+        ;;
+    -l) # List loaded drivers
+        lsmod | awk '{print $1}'
+        ;;
+    -lv) # List loaded drivers with details
+        lsmod
+        ;;
+    -b) # List drivers in blacklist
+        grep -v ^"#"   /etc/modprobe.d/blacklist*
+        ;;
+    *)
+        echo "Error: Invalid option." 1>&2
+        exit 1
+        ;;
+esac
