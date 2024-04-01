@@ -3,7 +3,7 @@
 
 ##      Developed for Linux
 ##      License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-        VERSION='5'
+        VERSION='6'
 ##      Destiny: To show how many packages do you have installed
 ##      Script usage: bash script_name
 
@@ -14,7 +14,7 @@
 ##      ( I seen this in some application for miniconda settings)
 ##      This means that additional applications can only be
 ##       visible from this second shell.
-# https://github.com/sigoden/upt
+##
 
 echo "Installed packages:"
 echo "=================="
@@ -36,11 +36,17 @@ echo "=================="
 #  For example: Fedora, OpenSuse
 [[ ! -z $(type -P rpm) ]] && RPM=$(rpm -qa | wc -l) && echo "rpm = $RPM"
 
+# yum list --installed = list rpm only for Fedora
+# zypper search -i = list rpm only for OpenSuse
+
 #  For based on Slackware
-[[ ! -z $(type -P slapt-get) ]] && Slackware=$(slapt-get --installed | wc -l) && echo "Slackware = $Slackware"
+[[ ! -z $(type -P slapt-get) ]] && Slackware=$(slapt-get --installed | wc -l) && echo "Slackware b. = $Slackware"
+
+# Slackware OS
+[[ -d "/var/log/packages" ]] && Slackware=$(ls -1 /var/log/packages | wc -l) && echo "Slackware = $Slackware"
 
 #  For FreeBSD
-[[ ! -z $(type -P pkg_info) ]] && PKG_info=$(pkg_info | wc -l) && echo "pkg_info = $PKG_info"
+[[ ! -z $(type -P pkg) ]] && PKG_info=$(pkg info | wc -l) && echo "pkg = $PKG_info"
 
 #  For Gentoo
 [[ ! -z $(type -P equery) ]] && Equery=$(equery list | wc -l) && echo "Equery = $Equery"
@@ -80,7 +86,7 @@ Count_AppImages=$(locate "AppImage.config" | grep "config"$ | wc -l)
 [[ ! -z $(type -P conda) ]] && Conda=$(conda list | grep -v ^'#' | wc -l) && echo "conda = $Conda"
 
 # asdf is a CLI tool that can manage multiple language runtime versions
-[[ ! -z $(type -P asdf) ]] && Asdf=$(asdf latest --all | wc -l) && && echo "asdf = $Asdf"
+[[ ! -z $(type -P asdf) ]] && Asdf=$(asdf latest --all | wc -l) && echo "asdf = $Asdf"
 
 
 [[ ! -z $(type -P postinstallerf) ]] && echo "postinstallerf = app with GUI"
@@ -89,7 +95,50 @@ Count_AppImages=$(locate "AppImage.config" | grep "config"$ | wc -l)
 [[ ! -z $(type -P appgrid) ]] && echo "appgrid = app with GUI"
 
 # UPT - Universal Package-management Tool
-[[ ! -z $(type -P upt) ]] && Upt=$(upt list | wc -l) && && echo "upt = $Upt"
+[[ ! -z $(type -P upt) ]] && Upt=$(upt list | wc -l) && echo "upt = $Upt"
+
+# "Alpine Package Keeper"
+[[ ! -z $(type -P apk) ]] && Apk=$(apk list -I | wc -l) && echo "apk = $Apk"
+
+# Mac using Homebrew brew list
+[[ ! -z $(type -P brew) ]] && Brew=$(brew list | wc -l) && echo "brew = $Brew"
+
+# cards list 
+[[ ! -z $(type -P cards) ]] && echo "cards app found, but I don't know what it is. Node.js projects?"
+[[ ! -z $(type -P cards) ]] && Cards=$(cards list | wc -l) && echo "cards = $Brew"
+
+# choco list = only for W. system
+
+# Part of the Portage package management system in Gentoo
+[[ ! -z $(type -P qlist) ]] && Qlist=$(qlist -Iv | wc -l) && echo "brew = $Qlist"
+
+# The package manager of the Solus project, a rolling-release Linux distribution
+[[ ! -z $(type -P eopkg) ]] && Eopkg=$(eopkg list-installed | wc -l) && echo "eopkg = $Eopkg"
+
+# GNU Guix is the default package manager of the GNU Guix System distribution
+[[ ! -z $(type -P guix) ]] && Guix=$(guix package -I | wc -l) && echo "guix = $Guix"
+
+# Nix is a package manager from NixOS Linux distribution
+[[ ! -z $(type -P nix-env) ]] && Nixenv=$(nix-env -q | wc -l) && echo "nix-env = $Nixenv"
+
+# OpenWrt
+[[ ! -z $(type -P opkg) ]] && Opkg=$(opkg list-installed | wc -l) && echo "opkg = $Opkg"
+
+# Used by Haiku OS
+[[ ! -z $(type -P pkgman) ]] && Pkgman=$(pkgman search -i -a | wc -l) && echo "pkgman = $Pkgman"
+
+# Used by Crux OS
+[[ ! -z $(type -P prt-get) ]] && Prtget=$(prt-get listinst | wc -l) && echo "prt-get = $Prtget"
+
+# scoop list = Scoop is a command-line installer for W.
+
+# pkgutil --pkgs = list all the packages installed with Apple's installer
+
+# winget list = W. Package Manager
+
+# Void Linux OS
+[[ ! -z $(type -P xbps-query) ]] && Xbps=$(xbps-query -l | wc -l) && echo "xbps-query = $Xbps"
+
 #--------------------------------------}
 
 #-------------------------------{
