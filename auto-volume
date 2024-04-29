@@ -3,11 +3,14 @@
 
 #=============================================================================={
 ##    Destiny:    For automatic volume control.
-     VERSION="1" 
+     VERSION="2" 
 ##    Date:       2024.04.29 (Year.Month.Day) 
 ##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
 ##    Source:   https://github.com/tele1/LinuxScripts
 ##    Script usage:   bash auto-volume
+##    To check only directly from the website:
+##      curl -L https://raw.githubusercontent.com/tele1/LinuxScripts/main/auto-volume | bash
+
 #==============================================================================}
  
 #=============================================================================={
@@ -34,6 +37,15 @@ Volume_of_External_Speakers="70%"
 Volume_of_Headphones="20%"
 #==============================}
 
+#======================={
+#   Things to do:
+#   1. Close app if exist error, example from "amixer get Headphone".
+#   2. "arecord" shows the volume of the music in the recording, 
+#        but it is not the volume after all changes that is output from the computer.
+#   3. Add quiet mode.
+#   4. Add GUI for change default level volumes.
+#=======================}
+
 F_Green_Info() {
     echo -e "\e[1;32m  Info: ${1} \e[0m'"
 }
@@ -57,9 +69,9 @@ while true; do
     if amixer get Headphone | grep -q "off"; then
         State_New="off"
         if [[ ! "$State_New" == "$State_Old" ]] ;then
-            F_Green_Info "Headphones disconnected"
+            F_Green_Info "  Headphones disconnected"
             amixer -D pulse sset Master 70% > /dev/null
-            F_Green_Info "New master volume is set."
+            F_Green_Info "  A new master volume level is set."
         fi
         State_Old="off"
     else
@@ -67,7 +79,7 @@ while true; do
         if [[ ! "$State_New" == "$State_Old" ]] ;then
             F_Green_Info "  Headphones connected"
             amixer -D pulse sset Master 20% > /dev/null
-            F_Green_Info "  New master volume is set."
+            F_Green_Info "  A new master volume level is set."
         fi
         State_Old="on"
     fi
