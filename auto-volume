@@ -1,0 +1,79 @@
+#!/bin/bash
+
+
+#=============================================================================={
+##    Destiny:    For automatic volume control.
+     VERSION="1" 
+##    Date:       2024.04.29 (Year.Month.Day) 
+##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
+##    Source:   https://github.com/tele1/LinuxScripts
+##    Script usage:   bash auto-volume
+#==============================================================================}
+ 
+#=============================================================================={
+# Check Dependecies - List created automatically by find-bash-dep version=10 
+# source=https://github.com/tele1/LinuxScripts
+ 
+[[ -z $(type -P amixer) ]] && DEP="$DEP"$'\n'"amixer"
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P grep) ]] && DEP="$DEP"$'\n'"grep"
+[[ -z $(type -P sleep) ]] && DEP="$DEP"$'\n'"sleep"
+[[ -z $(type -P true) ]] && DEP="$DEP"$'\n'"true"
+[[ -z $(type -P true) ]] && DEP="$DEP"$'\n'"pactl"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+ 
+#     Used Packages: alsa-utils, 
+#                   pulseaudio-utils: /usr/bin/pactl
+#=============================================================================={
+
+#=============================={
+##   ==== SETTINGS: ====
+Volume_of_External_Speakers="70%"
+Volume_of_Headphones="20%"
+#==============================}
+
+F_Green_Info() {
+    echo -e "\e[1;32m  Info: ${1} \e[0m'"
+}
+
+
+while true; do
+
+#    arecord -f "cd" "/dev/null" -d 1 -V "stereo"
+
+
+    # pokazuje tylko głośnośc muzyki, ale nie to co jest na wyjściu z komputera.
+    Output="$(arecord -f "cd" "/dev/null" -d 1 -V "mono" 2>&1 |  grep -o '[0-9]*' |tail -n9 | sort |tail -n1) "
+    echo "Sound level in player = $Output %"
+    echo "Master volume = $(amixer -D pulse sget Master | grep "Front Left:" | awk '{print $5}') "
+    echo "Volume of music players: "
+    echo " $(pactl list sink-inputs | grep % | awk -F "/" '{ print $2 }') "
+    
+    
+    
+
+    if amixer get Headphone | grep -q "off"; then
+        State_New="off"
+        if [[ ! "$State_New" == "$State_Old" ]] ;then
+            F_Green_Info "Headphones disconnected"
+            amixer -D pulse sset Master 70% > /dev/null
+            F_Green_Info "New master volume is set."
+        fi
+        State_Old="off"
+    else
+        State_New="on"
+        if [[ ! "$State_New" == "$State_Old" ]] ;then
+            F_Green_Info "  Headphones connected"
+            amixer -D pulse sset Master 20% > /dev/null
+            F_Green_Info "  New master volume is set."
+        fi
+        State_Old="on"
+    fi
+
+    echo " "
+    sleep 1
+done
+
+
