@@ -7,9 +7,9 @@
 ##    Date:       2024.04.29 (Year.Month.Day) 
 ##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
 ##    Source:   https://github.com/tele1/LinuxScripts
-##    Script usage:   bash auto-volume
+##    Script usage:   bash auto-level-volume
 ##    To check only directly from the website:
-##      curl -L https://raw.githubusercontent.com/tele1/LinuxScripts/main/auto-volume | bash
+##      curl -L https://raw.githubusercontent.com/tele1/LinuxScripts/main/auto-level-volume | bash
 
 #==============================================================================}
  
@@ -56,12 +56,13 @@ while true; do
 #    arecord -f "cd" "/dev/null" -d 1 -V "stereo"
 
 
-    # pokazuje tylko głośnośc muzyki, ale nie to co jest na wyjściu z komputera.
+#   2. "arecord" shows the volume of the music in the recording, 
+#        but it is not the volume after all changes that is output from the computer.
     Output="$(arecord -f "cd" "/dev/null" -d 1 -V "mono" 2>&1 |  grep -o '[0-9]*' |tail -n9 | sort |tail -n1) "
     echo "Sound level in player = $Output %"
     echo "Master volume = $(amixer -D pulse sget Master | grep "Front Left:" | awk '{print $5}') "
     echo "Volume of music players: "
-    echo " $(pactl list sink-inputs | grep % | awk -F "/" '{ print $2 }') "
+    echo "Test $(pactl list sink-inputs | grep % | awk -F "/" '{ print $2 }') "
     
     
     

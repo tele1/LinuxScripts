@@ -1,7 +1,7 @@
 #! /bin/bash 
 
 # Licence: GNU GPL v3  https://www.gnu.org/licenses/gpl-3.0.html
-  VERSION="10"
+  VERSION="11"
   SOURCE="https://github.com/tele1/LinuxScripts"
 # Destiny:      Script to find dependencies from *.bash and *.sh files
 # Script use:	Name_of_script --check /path/to/next/script
@@ -167,8 +167,31 @@ LIST_4=$(comm  -23 <(echo "$LIST_3" | sort) <(compgen -b | sort) | grep -v '\[' 
 ## == Test if script has commands from the list of commands   ==
 
 for NAME_SCRIPT in $FILES ; do
-    # Clear file = remove comments, echo coments, options, gtkdialog comments, gtkdialog if(if false disable:CHECKBOX2), html, empty lines.
-    CLEARED_FILE=$(sed -e 's/#[^#]*//g' -e 's/"[^"]*"//g' -e "s/'[^']*'//g" -e 's/-[^-]*//g' -e '/<label>/d' -e '/able:/d' -e 's/<[^>]*>//g' -e '/^\s*$/d'  ${NAME_SCRIPT})
+
+    Func_Clear_1() {
+    # Clear file = remove comments, " " and ' ' coments, 
+    #   options, gtkdialog comments, gtkdialog if(if false disable:CHECKBOX2),    
+    #    html, empty lines.
+    CLEARED_FILE=$(sed -e 's/#[^#]*//g' -e 's/"[^"]*"//g' -e "s/'[^']*'//g" \
+    -e 's/-[^-]*//g' -e '/<label>/d' -e '/able:/d' \
+    -e 's/<[^>]*>//g' -e '/^\s*$/d'  ${1})
+    }
+    Func_Clear_1 "${NAME_SCRIPT}"
+    
+    #----  This Part will try get commands from echo comments ----{
+    # From file = remove comments, show lines with echo, with '$(' , between '$(' and ')'
+    Commands_From_Echo=$(sed -e 's/#[^#]*//g' ${NAME_SCRIPT} | grep "echo" | grep '$(' | sed -e 's/.*$(\(.*\)).*/\1/')
+    
+    # Clear file = remove comments, " " and ' ' coments, 
+    #   options, gtkdialog comments, gtkdialog if(if false disable:CHECKBOX2),    
+    #    html, empty lines.
+    Part_Cleared_File=$(sed -e 's/#[^#]*//g' -e 's/"[^"]*"//g' -e "s/'[^']*'//g" \
+    -e 's/-[^-]*//g' -e '/<label>/d' -e '/able:/d' \
+    -e 's/<[^>]*>//g' -e '/^\s*$/d'  <<< "${Commands_From_Echo}")
+    #----  This Part will try get commands from echo comments ----}
+    
+    CLEARED_FILE="$CLEARED_FILE $(printf " \n ") $Part_Cleared_File"
+    
         MESSAGE_DEBUG "==============="
         MESSAGE_DEBUG "CLEARED_FILE = $CLEARED_FILE" 
         MESSAGE_DEBUG "==============="
@@ -336,7 +359,7 @@ case $1 in
 		echo " "
         echo '2. This script is not very fast.'
         echo ' '
-		echo '3. I did not use the package name for generating the example code '
+		echo '3. I did not use the package name for generating the example code in output of this script,'
 		echo ' because any Linux distribution can split a package into any number of packages and any name.'
 		echo " "
 		echo '4. For now it was hard for me to filter out all the comments created with "echo" from any script. '
