@@ -3,7 +3,7 @@
 
 #=============================================================================={
 ##    Destiny:    For automatic volume control.
-     VERSION="2" 
+     VERSION="3" 
 ##    Date:       2024.04.29 (Year.Month.Day) 
 ##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
 ##    Source:   https://github.com/tele1/LinuxScripts
@@ -42,14 +42,21 @@ Volume_of_Headphones="20%"
 #   1. Close app if exist error, example from "amixer get Headphone".
 #   2. "arecord" shows the volume of the music in the recording, 
 #        but it is not the volume after all changes that is output from the computer.
-#   3. Add quiet mode.
-#   4. Add GUI for change default level volumes.
+#   3. Add GUI for change default level volumes.
 #=======================}
 
 F_Green_Info() {
     echo -e "\e[1;32m  Info: ${1} \e[0m'"
 }
 
+F_If_Quiet() {
+    if [[ ! "$QUIET" == "ON" ]] ; then
+        ${@}
+    fi
+}
+
+#------------------------------------------------------------------------------{
+Func_Main_Code() {
 
 while true; do
 
@@ -59,10 +66,10 @@ while true; do
 #   2. "arecord" shows the volume of the music in the recording, 
 #        but it is not the volume after all changes that is output from the computer.
     Output="$(arecord -f "cd" "/dev/null" -d 1 -V "mono" 2>&1 |  grep -o '[0-9]*' |tail -n9 | sort |tail -n1) "
-    echo "Sound level in player = $Output %"
-    echo "Master volume = $(amixer -D pulse sget Master | grep "Front Left:" | awk '{print $5}') "
-    echo "Volume of music players: "
-    echo "Test $(pactl list sink-inputs | grep % | awk -F "/" '{ print $2 }') "
+    F_If_Quiet echo "Sound level in player = $Output %"
+    F_If_Quiet echo "Master volume = $(amixer -D pulse sget Master | grep "Front Left:" | awk '{print $5}') "
+    F_If_Quiet echo "Volume of music players: "
+    F_If_Quiet echo " $(pactl list sink-inputs | grep % | awk -F "/" '{ print $2 }') "
     
     
     
@@ -70,23 +77,63 @@ while true; do
     if amixer get Headphone | grep -q "off"; then
         State_New="off"
         if [[ ! "$State_New" == "$State_Old" ]] ;then
-            F_Green_Info "  Headphones disconnected"
+            F_If_Quiet F_Green_Info "  Headphones disconnected"
             amixer -D pulse sset Master 70% > /dev/null
-            F_Green_Info "  A new master volume level is set."
+            F_If_Quiet F_Green_Info "  A new master volume level is set."
         fi
         State_Old="off"
     else
         State_New="on"
         if [[ ! "$State_New" == "$State_Old" ]] ;then
-            F_Green_Info "  Headphones connected"
+            F_If_Quiet F_Green_Info "  Headphones connected"
             amixer -D pulse sset Master 20% > /dev/null
-            F_Green_Info "  A new master volume level is set."
+            F_If_Quiet F_Green_Info "  A new master volume level is set."
         fi
         State_Old="on"
     fi
 
-    echo " "
+    F_If_Quiet echo " "
     sleep 1
 done
 
+}
+#------------------------------------------------------------------------------}
 
+F_GUI() {
+    yad --form --title="Default Settings." --width=700 --height=150 \
+    --field="   Change default settings if you need:":LBL \
+    --field="Volume of External Speakers:":SCL 0 "${Volume_of_External_Speakers}" \
+    --field="Volume of Headphones":SCL "${Volume_of_Headphones}" \
+    --field="Warning: \n    Options / numbers for SCL are missing inside my \"man yad\" . \n \
+    So yad may not display real values from settings. \n \
+    my yad --version = 0.40.0 (GTK+ 3.24.33)":LBL 
+    
+}
+
+
+case "$1" in
+	"--gui"|"-g")
+	    F_Green_Info "GUI started."
+	    F_GUI
+	;;
+	"--quiet"|"-q")
+		QUIET=ON
+		Func_Main_Code
+	;;
+	"--help"|"-h")
+		echo "---------------------------------------------------------"
+		echo "usage: $0 --option"
+		echo " "
+		echo " Main:"
+		echo "   --gui        -g     Only run GUI for set variables."
+		echo "                       Not completed / It's not fully working yet."
+		echo "   --quiet      -q     Quiet mode for linux deamon."
+		echo "   --help       -h     show help"
+		echo " "
+		echo "---------------------------------------------------------"
+		exit
+	;;
+	*)
+        Func_Main_Code
+	;;
+esac
