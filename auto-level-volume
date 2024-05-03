@@ -3,7 +3,7 @@
 
 #=============================================================================={
 ##    Destiny:    For automatic volume control.
-     VERSION="3" 
+     VERSION="4" 
 ##    Date:       2024.04.29 (Year.Month.Day) 
 ##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
 ##    Source:   https://github.com/tele1/LinuxScripts
@@ -32,7 +32,8 @@
 #=============================================================================={
 
 #=============================={
-##   ==== SETTINGS: ====
+##   ==== DEFAULT SETTINGS: ====
+# It is used when config file not exist.
 Volume_of_External_Speakers="70%"
 Volume_of_Headphones="20%"
 #==============================}
@@ -42,8 +43,19 @@ Volume_of_Headphones="20%"
 #   1. Close app if exist error, example from "amixer get Headphone".
 #   2. "arecord" shows the volume of the music in the recording, 
 #        but it is not the volume after all changes that is output from the computer.
-#   3. Add GUI for change default level volumes.
 #=======================}
+
+#==================={
+App_Config_Folder="$HOME/.config/auto-level-volume"
+if [[ -f "${App_Config_Folder}/volume.conf" ]] ; then
+    source "${App_Config_Folder}/volume.conf"
+fi
+
+echo " "
+echo "Volume_of_External_Speakers = $Volume_of_External_Speakers"
+echo "Volume_of_Headphones = $Volume_of_Headphones"
+echo " "
+#===================}
 
 F_Green_Info() {
     echo -e "\e[1;32m  Info: ${1} \e[0m'"
@@ -51,7 +63,7 @@ F_Green_Info() {
 
 F_If_Quiet() {
     if [[ ! "$QUIET" == "ON" ]] ; then
-        ${@}
+        "${@}"
     fi
 }
 
@@ -78,36 +90,53 @@ while true; do
         State_New="off"
         if [[ ! "$State_New" == "$State_Old" ]] ;then
             F_If_Quiet F_Green_Info "  Headphones disconnected"
-            amixer -D pulse sset Master 70% > /dev/null
-            F_If_Quiet F_Green_Info "  A new master volume level is set."
+            amixer -D pulse sset Master $Volume_of_External_Speakers > /dev/null
+            F_If_Quiet F_Green_Info "  A new master volume level is set $Volume_of_External_Speakers ."
         fi
         State_Old="off"
     else
         State_New="on"
         if [[ ! "$State_New" == "$State_Old" ]] ;then
             F_If_Quiet F_Green_Info "  Headphones connected"
-            amixer -D pulse sset Master 20% > /dev/null
-            F_If_Quiet F_Green_Info "  A new master volume level is set."
+            amixer -D pulse sset Master $Volume_of_Headphones > /dev/null
+            F_If_Quiet F_Green_Info "  A new master volume level is set $Volume_of_Headphones ."
         fi
         State_Old="on"
     fi
 
     F_If_Quiet echo " "
-    sleep 1
+    sleep 2
 done
 
 }
 #------------------------------------------------------------------------------}
 
 F_GUI() {
-    yad --form --title="Default Settings." --width=700 --height=150 \
-    --field="   Change default settings if you need:":LBL \
+    echo man
+   GUI_Out=$( yad --form --title="Default Settings." --width=700 --height=150 \
+    --field="   Set default settings if you need:":LBL \
     --field="Volume of External Speakers:":SCL 0 "${Volume_of_External_Speakers}" \
     --field="Volume of Headphones":SCL "${Volume_of_Headphones}" \
     --field="Warning: \n    Options / numbers for SCL are missing inside my \"man yad\" . \n \
-    So yad may not display real values from settings. \n \
-    my yad --version = 0.40.0 (GTK+ 3.24.33)":LBL 
+    But for me in strange way working. \n \
+    So for you yad may not display real values from settings. \n \
+    my yad --version = 0.40.0 (GTK+ 3.24.33)":LBL )
     
+    if [[ ! "$?" == 0 ]] ; then
+        echo "The change to the settings was canceled by the user."
+        exit 0
+    fi
+    Volume_of_External_Speakers="$(awk -F  '|' '{print $2}' <<< "$GUI_Out")"
+    Volume_of_Headphones="$(awk -F  '|' '{print $3}' <<< "$GUI_Out")"
+    mkdir -p "$App_Config_Folder"
+    echo "Volume_of_External_Speakers=${Volume_of_External_Speakers}%" > "${App_Config_Folder}/volume.conf"
+    echo "Volume_of_Headphones=${Volume_of_Headphones}%" >> "${App_Config_Folder}/volume.conf" 
+    
+    if [ -f "${App_Config_Folder}/volume.conf" ]; then
+        F_Green_Info "Settings saved to ${App_Config_Folder}/volume.conf" 
+    else
+        echo "Error: File not exist in ${App_Config_Folder}/volume.conf"
+    fi
 }
 
 
@@ -126,7 +155,6 @@ case "$1" in
 		echo " "
 		echo " Main:"
 		echo "   --gui        -g     Only run GUI for set variables."
-		echo "                       Not completed / It's not fully working yet."
 		echo "   --quiet      -q     Quiet mode for linux deamon."
 		echo "   --help       -h     show help"
 		echo " "
