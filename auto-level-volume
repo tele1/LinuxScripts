@@ -3,8 +3,8 @@
 
 #=============================================================================={
 ##    Destiny:    For automatic volume control.
-     VERSION="4" 
-##    Date:       2024.04.29 (Year.Month.Day) 
+     VERSION="5" 
+##    Date:       2024.05.08 (Year.Month.Day) 
 ##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
 ##    Source:   https://github.com/tele1/LinuxScripts
 ##    Script usage:   bash auto-level-volume
@@ -14,21 +14,25 @@
 #==============================================================================}
  
 #=============================================================================={
-# Check Dependecies - List created automatically by find-bash-dep version=10 
+# Check Dependecies - List created automatically by find-bash-dep version=11 
 # source=https://github.com/tele1/LinuxScripts
  
 [[ -z $(type -P amixer) ]] && DEP="$DEP"$'\n'"amixer"
+[[ -z $(type -P arecord) ]] && DEP="$DEP"$'\n'"arecord"
 [[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
 [[ -z $(type -P grep) ]] && DEP="$DEP"$'\n'"grep"
+[[ -z $(type -P mkdir) ]] && DEP="$DEP"$'\n'"mkdir"
+[[ -z $(type -P pactl) ]] && DEP="$DEP"$'\n'"pactl"
 [[ -z $(type -P sleep) ]] && DEP="$DEP"$'\n'"sleep"
+[[ -z $(type -P sox) ]] && DEP="$DEP"$'\n'"sox"
 [[ -z $(type -P true) ]] && DEP="$DEP"$'\n'"true"
-[[ -z $(type -P true) ]] && DEP="$DEP"$'\n'"pactl"
+[[ -z $(type -P yad) ]] && DEP="$DEP"$'\n'"yad"
  
 # End script if exist any error
 [ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
  
-#     Used Packages: alsa-utils, 
-#                   pulseaudio-utils: /usr/bin/pactl
+#     Used Packages: alsa-utils,pulseaudio-utils,sox,yad
+
 #=============================================================================={
 
 #=============================={
@@ -40,9 +44,12 @@ Volume_of_Headphones="20%"
 
 #======================={
 #   Things to do:
-#   1. Close app if exist error, example from "amixer get Headphone".
-#   2. "arecord" shows the volume of the music in the recording, 
-#        but it is not the volume after all changes that is output from the computer.
+#   1. Measure the sound level after adjusting the sound level.
+#       "arecord" can shows the volume of the music in the recording, 
+#       but it is not the volume after all changes that is output from the computer.
+#       This is music directly from the player.
+#       No solution found.
+#   2. Try adding another automatic audio level control.
 #=======================}
 
 #==================={
@@ -61,10 +68,31 @@ F_Green_Info() {
     echo -e "\e[1;32m  Info: ${1} \e[0m'"
 }
 
+F_Red_Error() {
+    echo -e "\e[1;91m  Error: ${1} \e[0m'"
+}
+
 F_If_Quiet() {
     if [[ ! "$QUIET" == "ON" ]] ; then
         "${@}"
     fi
+}
+
+F_Arecord_1() {
+    #   2. "arecord" shows the volume of the music in the recording, 
+    #        but it is not the volume after all changes that is output from the computer.
+    Arecord_1_Output="$(arecord -f "cd" "/dev/null" -d 1 -V "mono" 2>&1 |  grep -o '[0-9]*' |tail -n9 | sort |tail -n1) "
+}
+
+F_Arecord_2() {
+    # One second (1) recording from the device output for example: hw:CARD=PCH,DEV=0 ( it is from output " aplay -L " )
+    # Only list all devices:  aplay -L | grep -v ^" "
+    Device="default"
+    #Device="pulse"
+    Statistics=$(arecord -q -t raw -f cd -r 44100 -D $Device -d 1 | \
+    sox -t raw -r 44100 -c 2 -b 16 -e signed-integer -  -n  stat 2>&1 )
+    Arecord_2_Output=$(grep "Maximum amp" <<< "$Statistics")
+        #Arecord_2_Output=$(grep "Maximum amp" <<< "$Statistics")
 }
 
 #------------------------------------------------------------------------------{
@@ -72,40 +100,43 @@ Func_Main_Code() {
 
 while true; do
 
-#    arecord -f "cd" "/dev/null" -d 1 -V "stereo"
-
-
-#   2. "arecord" shows the volume of the music in the recording, 
-#        but it is not the volume after all changes that is output from the computer.
-    Output="$(arecord -f "cd" "/dev/null" -d 1 -V "mono" 2>&1 |  grep -o '[0-9]*' |tail -n9 | sort |tail -n1) "
-    F_If_Quiet echo "Sound level in player = $Output %"
+               F_Arecord_1 && echo "Sound level in player = $Arecord_1_Output %"
+    F_If_Quiet F_Arecord_2 && echo "S'ound' level in player = $Arecord_2_Output"
     F_If_Quiet echo "Master volume = $(amixer -D pulse sget Master | grep "Front Left:" | awk '{print $5}') "
     F_If_Quiet echo "Volume of music players: "
     F_If_Quiet echo " $(pactl list sink-inputs | grep % | awk -F "/" '{ print $2 }') "
     
     
     
-
-    if amixer get Headphone | grep -q "off"; then
-        State_New="off"
-        if [[ ! "$State_New" == "$State_Old" ]] ;then
-            F_If_Quiet F_Green_Info "  Headphones disconnected"
-            amixer -D pulse sset Master $Volume_of_External_Speakers > /dev/null
-            F_If_Quiet F_Green_Info "  A new master volume level is set $Volume_of_External_Speakers ."
+    Headphone=$(amixer get Headphone)
+    if [[ "$?" == "0" ]] ; then
+    
+        if grep -q "off" <<< "$Headphone" ; then
+            State_New="off"
+            if [[ ! "$State_New" == "$State_Old" ]] ;then
+                F_If_Quiet F_Green_Info "  Headphones disconnected"
+                amixer -D pulse sset Master $Volume_of_External_Speakers > /dev/null
+                F_If_Quiet F_Green_Info "  A new master volume level is set $Volume_of_External_Speakers ."
+            fi
+            State_Old="off"
+        else
+            State_New="on"
+            if [[ ! "$State_New" == "$State_Old" ]] ;then
+                F_If_Quiet F_Green_Info "  Headphones connected"
+                amixer -D pulse sset Master $Volume_of_Headphones > /dev/null
+                F_If_Quiet F_Green_Info "  A new master volume level is set $Volume_of_Headphones ."
+            fi
+            State_Old="on"
         fi
-        State_Old="off"
+    
     else
-        State_New="on"
-        if [[ ! "$State_New" == "$State_Old" ]] ;then
-            F_If_Quiet F_Green_Info "  Headphones connected"
-            amixer -D pulse sset Master $Volume_of_Headphones > /dev/null
-            F_If_Quiet F_Green_Info "  A new master volume level is set $Volume_of_Headphones ."
-        fi
-        State_Old="on"
+        F_Red_Error " 'amixer get Headphone' returned an error. Script can't control the sound level."
     fi
-
+    
+    F_If_Quiet echo "--------"
     F_If_Quiet echo " "
     sleep 2
+    
 done
 
 }
