@@ -1,0 +1,20 @@
+#!/bin/bash
+
+
+#   Script to shut down the system if the system is started without the firefox browser.
+#   I would like to remind you that the scripts must be run from cron from root.
+
+sleep 60
+
+if pgrep -x "firefox" > /dev/null ; then
+    echo "The Firefox process exists."
+else
+    echo "The Firefox process does not exist, the computer will be turned off."
+    
+    # Saving the event to the log. You can also use the logger command.
+    Time=$(date +"%Y/%m/%d--%H:%M")
+    echo "$Time : The system has been forced to shut down." >> /var/log/forced-system-shutdown.log 2>&1
+    
+    # System shutdown.
+    shutdown -h now
+fi

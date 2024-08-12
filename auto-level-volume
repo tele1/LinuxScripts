@@ -3,14 +3,21 @@
 
 #=============================================================================={
 ##    Destiny:    For automatic volume control.
-     VERSION="6" 
-##    Date:       2024.05.12 (Year.Month.Day) 
+     VERSION="8" 
+##    Date:       2024.08.12 (Year.Month.Day) 
 ##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
 ##    Source:   https://github.com/tele1/LinuxScripts
-##    Script usage:   bash auto-level-volume
-##    To check only directly from the website:
-##      curl -L https://raw.githubusercontent.com/tele1/LinuxScripts/main/auto-level-volume | bash
-
+##    Script usage:   bash auto-level-volume --help
+##
+##   You can add this script ( auto-level-volume -q )
+##   to user cron or XDG Autostart - it is better way for system with systemd.
+##   then script can automatically change the sound volume when you 
+##   insert usb headphones, jack headphones or take out all of the above.
+##   And you can change settings with command auto-level-volume -g
+##   
+##  My desires were greater, for example adding 
+##  a sound graph ( Gnuplot ) from the output,
+##  But for now it would work too weird.
 #==============================================================================}
  
 #=============================================================================={
@@ -18,30 +25,23 @@
 # source=https://github.com/tele1/LinuxScripts
  
 [[ -z $(type -P amixer) ]] && DEP="$DEP"$'\n'"amixer"
-[[ -z $(type -P arecord) ]] && DEP="$DEP"$'\n'"arecord"
+[[ -z $(type -P cut) ]] && DEP="$DEP"$'\n'"cut"
+[[ -z $(type -P display) ]] && DEP="$DEP"$'\n'"display"
 [[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
 [[ -z $(type -P grep) ]] && DEP="$DEP"$'\n'"grep"
+[[ -z $(type -P lsusb) ]] && DEP="$DEP"$'\n'"lsusb"
 [[ -z $(type -P mkdir) ]] && DEP="$DEP"$'\n'"mkdir"
 [[ -z $(type -P pactl) ]] && DEP="$DEP"$'\n'"pactl"
 [[ -z $(type -P sleep) ]] && DEP="$DEP"$'\n'"sleep"
-[[ -z $(type -P sox) ]] && DEP="$DEP"$'\n'"sox"
 [[ -z $(type -P true) ]] && DEP="$DEP"$'\n'"true"
 [[ -z $(type -P yad) ]] && DEP="$DEP"$'\n'"yad"
  
 # End script if exist any error
 [ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
  
-#     Used Packages: alsa-utils,pulseaudio-utils,sox,yad
-
+#     Used Packages: alsa-utils,coreutils,imagemagick-6.q16,pulseaudio-utils,usbutils,yad,
 #=============================================================================={
 
-#=============================={
-##   ==== DEFAULT SETTINGS: ====
-# It is used when config file not exist.
-Volume_of_External_Speakers="70%"
-Volume_of_Headphones="20%"
-Time_of_Refresh="1"
-#==============================}
 
 #======================={
 #   Things to do:
@@ -53,18 +53,12 @@ Time_of_Refresh="1"
 #   2. Try adding another automatic audio level control.
 #=======================}
 
-#==================={
-App_Config_Folder="$HOME/.config/auto-level-volume"
-if [[ -f "${App_Config_Folder}/volume.conf" ]] ; then
-    source "${App_Config_Folder}/volume.conf"
-fi
 
-echo " "
-echo "Volume_of_External_Speakers = $Volume_of_External_Speakers"
-echo "Volume_of_Headphones = $Volume_of_Headphones"
-echo " "
-#===================}
+#==== FOR SOME APPS WORKING FROM CRON ===={
+export XDG_RUNTIME_DIR='/run/user/1000'
+#=========================================}
 
+#==== SOME SMALL FUNCTIONS ======================{
 F_Green_Info() {
     echo -e "\e[1;32m  Info: ${1} \e[0m"
 }
@@ -73,98 +67,248 @@ F_Red_Error() {
     echo -e "\e[1;91m  Error: ${1} \e[0m"
 }
 
-F_If_Quiet() {
+F_If_Not_Quiet() {
     if [[ ! "$QUIET" == "ON" ]] ; then
         "${@}"
     fi
 }
 
-F_Arecord_1() {
-    #   2. "arecord" shows the volume of the music in the recording, 
-    #        but it is not the volume after all changes that is output from the computer.
-    Arecord_1_Output="$(arecord -f "cd" "/dev/null" -d 1 -V "mono" 2>&1 |  grep -o '[0-9]*' |tail -n9 | sort |tail -n1) "
+#F_Arecord_1() {
+#    #   2. "arecord" shows the volume of the music in the recording, 
+#    #        but it is not the volume after all changes that is output from the computer.
+#    Arecord_1_Output="$(arecord -f "cd" "/dev/null" -d 1 -V "mono" 2>&1 |  grep -o '[0-9]*' |tail -n9 | sort |tail -n1) "
+#}
+
+#F_Arecord_2() {
+#    # One second (1) recording from the device output for example: hw:CARD=PCH,DEV=0 ( it is from output " aplay -L " )
+#    # Only list all devices:  aplay -L | grep -v ^" "
+#    Device="default"
+#    #Device="pulse"
+#    Statistics=$(arecord -q -t raw -f cd -r 44100 -D $Device -d 1 | \
+#    sox -t raw -r 44100 -c 2 -b 16 -e signed-integer -  -n  stat 2>&1 )
+#    Arecord_2_Output=$(grep "Maximum amp" <<< "$Statistics")
+#        #Arecord_2_Output=$(grep "Maximum amp" <<< "$Statistics")
+#}
+
+    # Get Master volume %
+Get_Master_Volume() {
+    amixer -D pulse sget Master | grep "Front Left:" | awk '{print $5}' | tr -cd '0-9'
+    
+    Func_Set_Master_Volume() {
+        amixer -D pulse sset Master $1 > /dev/null
+    }
+    
 }
 
-F_Arecord_2() {
-    # One second (1) recording from the device output for example: hw:CARD=PCH,DEV=0 ( it is from output " aplay -L " )
-    # Only list all devices:  aplay -L | grep -v ^" "
-    Device="default"
-    #Device="pulse"
-    Statistics=$(arecord -q -t raw -f cd -r 44100 -D $Device -d 1 | \
-    sox -t raw -r 44100 -c 2 -b 16 -e signed-integer -  -n  stat 2>&1 )
-    Arecord_2_Output=$(grep "Maximum amp" <<< "$Statistics")
-        #Arecord_2_Output=$(grep "Maximum amp" <<< "$Statistics")
-}
 
-#------------------------------------------------------------------------------{
-Func_Main_Code() {
+#================================================}
 
-while true; do
+##======= DEFAULT SETTINGS: ===={
+# It is used when config file not exist.
+Vol_Jack_Speakers="70%"
+Vol_Jack_Headphones="20%"
+Vol_USB_Device="20%"
+Default_USB_Device="sound"
+Time_of_Refresh="1"
+##==============================}
 
-    F_If_Quiet F_Arecord_1 ; F_If_Quiet echo "Sound level in player = $Arecord_1_Output %" 
-    F_If_Quiet F_Arecord_2 ; F_If_Quiet echo "Sound level in player = $Arecord_2_Output" 
-    F_If_Quiet echo "Master volume = $(amixer -D pulse sget Master | grep "Front Left:" | awk '{print $5}') "
-    F_If_Quiet echo "Volume of music players: "
-    F_If_Quiet echo " $(pactl list sink-inputs | grep % | awk -F "/" '{ print $2 }') "
+#==== READ CONFIG FILE ============={
+App_Config_Folder="$HOME/.config/auto-level-volume"
+if [[ -f "${App_Config_Folder}/volume.conf" ]] ; then
+    source "${App_Config_Folder}/volume.conf"
+fi
+
+echo " "
+echo "    Settings:"
+echo "Vol_Jack_Speakers = $Vol_Jack_Speakers"
+echo "Vol_Jack_Headphones = $Vol_Jack_Headphones"
+echo "Vol_USB_Device = $Vol_USB_Device"
+echo "Default_USB_Device = $Default_USB_Device"
+echo "Time_of_Refresh = $Time_of_Refresh"
+echo " "
+#==================================}
+
+
+#==== MAIN FUNCTIONS ============================================{
+Func_Check_Device() {
+
+    # Reset
+    Device__Detected=""
     
-    
-    
-    Headphone=$(amixer get Headphone)
+    # Check Headphone device
+    Headphone_dev=$(amixer get Headphone)
     if [[ "$?" == "0" ]] ; then
-    
-        if grep -q "off" <<< "$Headphone" ; then
-            State_New="off"
-            if [[ ! "$State_New" == "$State_Old" ]] ;then
-                F_If_Quiet F_Green_Info "  Headphones disconnected"
-                amixer -D pulse sset Master $Volume_of_External_Speakers > /dev/null
-                F_If_Quiet F_Green_Info "  A new master volume level is set $Volume_of_External_Speakers ."
-            fi
-            State_Old="off"
-        else
-            State_New="on"
-            if [[ ! "$State_New" == "$State_Old" ]] ;then
-                F_If_Quiet F_Green_Info "  Headphones connected"
-                amixer -D pulse sset Master $Volume_of_Headphones > /dev/null
-                F_If_Quiet F_Green_Info "  A new master volume level is set $Volume_of_Headphones ."
-            fi
-            State_Old="on"
+        if grep -q '\[on\]' <<< "$Headphone_dev" ; then
+            Device__Detected="Headphones"
         fi
-    
+        # "  Headphones disconnected"
+        # "  Headphones connected"
     else
-        F_Red_Error " 'amixer get Headphone' returned an error. Script can't control the sound level."
+        # " if command: 'amixer get Headphone' returned an error.
+        F_Red_Error " 'amixer get Headphone' returned an error "
+        F_Red_Error " and script can't control the sound level."
+        echo "$Headphone_dev"
+        exit 1 
     fi
     
-    F_If_Quiet echo "--------"
-    F_If_Quiet echo " "
+    # USB device
+    USB_dev=$(lsusb | cut -d ' ' -f7- )
+    if grep -qi "$Default_USB_Device" <<< "$USB_dev" ; then
+        Device__Detected="USB"
+    fi
+    
+    # External speakers
+    if [[ -z "$Device__Detected" ]] ; then
+        Device__Detected="Speakers"
+    fi
+    
+    #echo "$Device__Detected"
+}
+
+Func_Service() {
+
+#   inotifywait is a better option than "while true",
+#    but I don't know if it is possible to use it here.
+while true; do
+
+##  Info: I tried use this to get sound volume from output
+##  but using audio recording causes a microphone icon to pop up in the Mate graphical environment.
+##  The whole thing was supposed to be used to automatically mute the sound 
+##  when it's too loud at the output.
+##  I don't see a way to do this with Pulse, maybe it will be possible with PipeWire,
+##  in the future.
+##
+#    F_If_Not_Quiet F_Arecord_1 ; F_If_Not_Quiet echo "Sound level in player = $Arecord_1_Output %" 
+#    F_If_Not_Quiet F_Arecord_2 ; F_If_Not_Quiet echo "Sound level in player = $Arecord_2_Output" 
+
+    F_If_Not_Quiet echo "Master volume = $(amixer -D pulse sget Master | grep "Front Left:" | awk '{print $5}') "
+    F_If_Not_Quiet echo "Volume of music players: "
+    F_If_Not_Quiet echo " $(pactl list sink-inputs | grep % | awk -F "/" '{ print $2 }') "
+
+    Func_Check_Device
+    
+    case "$Device__Detected" in
+        "Headphones")
+            if [[ ! "$Device__Detected" == "$Device__Detected_Old" ]] ;then
+                F_If_Not_Quiet F_Green_Info "  Headphones connected"
+                amixer -D pulse sset Master $Vol_Jack_Headphones > /dev/null
+                F_If_Not_Quiet F_Green_Info "  A new master volume level is set $Vol_Jack_Headphones ."
+            fi
+        ;;
+        "USB")
+            if [[ ! "$Device__Detected" == "$Device__Detected_Old" ]] ;then
+                F_If_Not_Quiet F_Green_Info "  USB device connected"
+                amixer -D pulse sset Master $Vol_USB_Device > /dev/null
+                F_If_Not_Quiet F_Green_Info "  A new master volume level is set $Vol_USB_Device ."
+            fi
+        ;;
+        "Speakers")
+            if [[ ! "$Device__Detected" == "$Device__Detected_Old" ]] ;then
+                F_If_Not_Quiet F_Green_Info "  Speakers connected"
+                amixer -D pulse sset Master $Vol_Jack_Speakers > /dev/null
+                F_If_Not_Quiet F_Green_Info "  A new master volume level is set $Vol_Jack_Speakers ."
+            fi
+        ;;
+    esac
+
+    Device__Detected_Old="$Device__Detected"
+    
+    F_If_Not_Quiet echo "--------"
+    F_If_Not_Quiet echo " "
     sleep "$Time_of_Refresh"
     
 done
 
 }
-#------------------------------------------------------------------------------}
+
 
 F_GUI() {
-   GUI_Out=$( yad --form --title="Default Settings." --width=700 --height=150 \
+
+    Func_Check_Device
+
+
+    #--field="Default USB Device":CB "Sound\!^Myjnia\!${ComboBox_USB_Devices}" \
+
+    #ComboBox_USB_Devices="$( awk '{print $0 "\\" "!" }' <<< "$USB_dev" | tr -d \\n)"
+    
+    Func_Add_Chars() {
+        while read -r Line ; do
+            if [[ "$Line" == "$Default_USB_Device" ]] ; then
+                echo -n "^${Line}\\!"
+            else
+                echo -n "${Line}\\!"
+            fi
+        done <<< "$USB_dev" 
+        
+        if [[ "sound" == "$Default_USB_Device" ]] ; then
+            echo -n "^sound"
+        else
+            echo -n "sound"
+        fi
+    }
+    
+    ComboBox_USB_Devices="$(Func_Add_Chars)"
+
+    #  It's here again because if it's outside of this function F_GUI it doesn't work for yad
+    Func_Set_Master_Volume() {
+        amixer -D pulse sset Master $1 > /dev/null
+    }
+
+    Func_Button_Sound() {
+        yad --scale     --print-partial     --text=" Volume Control              " \
+        --min-value=0 --max-value=100     \
+        --value="$(Get_Master_Volume)" 2> /dev/null | while read VOL; do \
+        Func_Set_Master_Volume "$VOL%" ; done
+    }
+
+    export Func_Button_Sound
+
+    while : ; do
+    GUI_Out=$( yad --form --title="Auto Level Volume - Default Settings." --width=700 --height=150 \
     --field="   Set default settings if you need:":LBL \
-    --field="Volume of External Speakers:":SCL 0 "${Volume_of_External_Speakers}" \
-    --field="Volume of Headphones":SCL "${Volume_of_Headphones}" \
+    --field="Volume of External Speakers:":SCL 0 "${Vol_Jack_Speakers}" \
+    --field="Volume of Headphones":SCL "${Vol_Jack_Headphones}" \
+    --field="Volume of USB Devices":SCL "${Vol_USB_Device}" \
     --field="Time of Data Refresh (sec.)":NUM "${Time_of_Refresh}\!1..60" \
+    --field="Default USB Device":CB "${ComboBox_USB_Devices}" \
     --field=" - Warning: \n    Options / numbers for SCL are missing inside my \"man yad\" . \n \
     But for me in strange way working. \n \
     So for you yad may not display real values from settings. \n \
-    my yad --version = 0.40.0 (GTK+ 3.24.33)":LBL \
-    --field=" - Setting will saved to ${App_Config_Folder}/volume.conf":LBL )
+    My yad --version = 0.40.0 (GTK+ 3.24.33)":LBL \
+    --field=" ":LBL \
+    --field=" - Setting will saved to ${App_Config_Folder}/volume.conf":LBL \
+    --field=" ":LBL \
+    --button="Master Sound Volume Now!gtk-properties:10" \
+    --button="gtk-cancel:1" \
+    --button="Save To Settings And Exit!gtk-ok:0" )
+
+    Status_Out="$?"
+    case "$Status_Out" in
+	    "10")  # I can not use "yad --form ...:FBTN Func_Button_Sound" 
+	            # So I added window this way.
+	        Func_Button_Sound
+	    ;;
+	    "1")
+	        echo "  The change to the settings was canceled by the user."
+            exit 0
+	    ;;
+	    "0")
+	        break
+	    ;;
+	esac
+    done
     
-    if [[ ! "$?" == 0 ]] ; then
-        echo "The change to the settings was canceled by the user."
-        exit 0
-    fi
-    Volume_of_External_Speakers="$(awk -F  '|' '{print $2}' <<< "$GUI_Out")"
-    Volume_of_Headphones="$(awk -F  '|' '{print $3}' <<< "$GUI_Out")"
-    Time_of_Refresh="$(awk -F  '|' '{print $4}' <<< "$GUI_Out")"
+
+    Vol_Jack_Speakers="$(awk -F  '|' '{print $2}' <<< "$GUI_Out")"
+    Vol_Jack_Headphones="$(awk -F  '|' '{print $3}' <<< "$GUI_Out")"
+    Vol_USB_Device="$(awk -F  '|' '{print $4}' <<< "$GUI_Out")"
+    Time_of_Refresh="$(awk -F  '|' '{print $5}' <<< "$GUI_Out")"
+    Default_USB_Device="$(awk -F  '|' '{print $6}' <<< "$GUI_Out")"
     mkdir -p "$App_Config_Folder"
-    echo "Volume_of_External_Speakers=${Volume_of_External_Speakers}%" > "${App_Config_Folder}/volume.conf"
-    echo "Volume_of_Headphones=${Volume_of_Headphones}%" >> "${App_Config_Folder}/volume.conf" 
+    echo "Vol_Jack_Speakers=${Vol_Jack_Speakers}%" > "${App_Config_Folder}/volume.conf"
+    echo "Vol_Jack_Headphones=${Vol_Jack_Headphones}%" >> "${App_Config_Folder}/volume.conf"
+    echo "Vol_USB_Device=${Vol_USB_Device}%" >> "${App_Config_Folder}/volume.conf"
+    echo "Default_USB_Device=\"${Default_USB_Device}\"" >> "${App_Config_Folder}/volume.conf"
     echo "Time_of_Refresh=${Time_of_Refresh}" >> "${App_Config_Folder}/volume.conf" 
     
     if [ -f "${App_Config_Folder}/volume.conf" ]; then
@@ -173,6 +317,21 @@ F_GUI() {
         echo "Error: File not exist in ${App_Config_Folder}/volume.conf"
     fi
 }
+#================================================================}
+
+Func_Print_Help() {
+		echo "---------------------------------------------------------"
+		echo " Usage: bash $0 --option"
+		echo " "
+		echo " Available Options:"
+		echo "   --debug      -d     Debug mode, linux service / deamon."
+		echo "   --gui        -g     Run GUI for set own volume settings."
+		echo "   --help       -h     Show this help."
+		echo "   --quiet      -q     Quiet mode, linux service / deamon."
+		echo " "
+		echo "---------------------------------------------------------"
+		exit
+}
 
 
 case "$1" in
@@ -180,23 +339,23 @@ case "$1" in
 	    F_Green_Info "GUI started."
 	    F_GUI
 	;;
-	"--quiet"|"-q")
-		QUIET=ON
-		Func_Main_Code
-	;;
 	"--help"|"-h")
-		echo "---------------------------------------------------------"
-		echo "usage: $0 --option"
-		echo " "
-		echo " Main:"
-		echo "   --gui        -g     Only run GUI for set variables."
-		echo "   --quiet      -q     Quiet mode for linux deamon."
-		echo "   --help       -h     show help"
-		echo " "
-		echo "---------------------------------------------------------"
-		exit
+        Func_Print_Help
+	;;
+	"--test"|"-t")
+	    Func_Check_Device
+	;;
+	"--quiet"|"-q")
+	    # application that will be running in the background
+		QUIET=ON
+		Func_Service
+	;;
+	"--debug"|"-d")
+		Func_Service
 	;;
 	*)
-        Func_Main_Code
+        echo "  Error: Option empty or not recognized."
+        echo "   "
+        Func_Print_Help
 	;;
 esac
