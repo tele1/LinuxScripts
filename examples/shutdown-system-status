@@ -1,0 +1,60 @@
+#!/bin/bash
+
+##-----------------------------
+##      Date:       2024.10.08 (Year.Month.Day) 
+##      License:    GNU GPL v.3  http://www.gnu.org/licenses/gpl-3.0.en.html
+##      Version="1"
+##-----------------------------
+
+##  Function allows you to replace multiple lines with one command in main code.
+Function_Check_Status() {
+    ## Print line | only second column | only first line
+    Status="$( cat /proc/acpi/button/lid/LID0/state | awk '{ print $2 }' | head -n1 )"
+}
+
+
+Function_Start_Countdown() {
+    # Start the countdown to close system ( 120 s )
+    # If this makes it difficult to boot your system then you need to remove this script from system with live USB.
+    Number=1; while [ $Number -le 120 ]; do
+        echo $Number; Number=$(( Number + 1 ));
+        
+        Function_Check_Status 
+        
+        if [[ "$Status" == "open" ]] ; then
+            echo "Info: Shutdown aborted."
+            break
+        elif [[ "$Number" == "119" ]] ; then
+            echo "We close the system."
+            shutdown now
+        fi
+        
+        sleep 1
+    done
+
+}
+
+
+# Infinite loop / The main code starts here.
+while true
+do
+    Function_Check_Status
+
+    if [[ "$Status" == "open" ]] ; then
+        echo " Info: Laptop cover is open."
+        echo " Status = $Status" 
+        
+    elif [[ "$Status" == "closed" ]] ;then
+        echo " Info: Laptop cover is closed."
+        echo " Status = $Status" 
+        Function_Start_Countdown
+        
+    else
+        echo "Error:  It is not recognized whether the cover is closed or open."
+        echo " Status = $Status" 
+        exit 1
+    fi
+
+    sleep 10
+done
+

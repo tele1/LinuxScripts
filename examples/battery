@@ -1,0 +1,220 @@
+#!/bin/bash
+ 
+#=============================================================================={
+##    Destiny:    Example GUI for TLP
+     VERSION="Alpha 1" 
+##    Date:       2024.11.06 (Year.Month.Day) 
+##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
+##    Source:   <Edit> 
+##    Script usage:   bash script
+##    Doc tlp: https://linrunner.de/tlp/
+#==============================================================================}
+
+
+#=============================================================================={
+# Check Dependecies - List created automatically by find-bash-dep version=11 
+# source=https://github.com/tele1/LinuxScripts
+ 
+[[ -z $(type -P awk) ]] && DEP="$DEP"$'\n'"awk"
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P grep) ]] && DEP="$DEP"$'\n'"grep"
+[[ -z $(type -P printf) ]] && DEP="$DEP"$'\n'"printf"
+[[ -z $(type -P sed) ]] && DEP="$DEP"$'\n'"sed"
+[[ -z $(type -P tlp) ]] && DEP="$DEP"$'\n'"tlp"
+[[ -z $(type -P yad) ]] && DEP="$DEP"$'\n'"yad"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+ 
+#     Used Packages: coreutils,gawk,tlp,yad,
+#=============================================================================={
+
+if [[ ! -f "/etc/tlp.conf" ]]; then
+    echo "  Error: File /etc/tlp.conf not exist."
+    echo "  The script needs improvement."
+    exit 1
+fi
+
+if grep -riq "Ubuntu" /etc/*release ; then
+    Base_Linux_Distro="Ubuntu"
+    Permissions="pkexec env DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY sudo"
+    
+elif grep -riq "Arch Linux" /etc/*release; then
+    Base_Linux_Distro="Arch"
+    echo "The script needs development"
+    exit 1
+    
+else
+    Base_Linux_Distro="Other Linux Distro"
+    Permissions="su -c"
+    echo "The script needs development"
+    exit 1
+fi
+
+echo "Detected = $Base_Linux_Distro"
+
+Status_Bat=$( $(printf "${Permissions}") tlp-stat -b )
+
+#------------------------------------------------------------------------------{
+## Example outputs command " tlp-stat -b " for test this script.
+Func_New_Status_Bat() {
+Status_Bat="
+--- TLP 1.8.0 --------------------------------------------
+
++++ Battery Status     ===>  BAT0
+/sys/class/power_supply/BAT0/capacity       =  80%
+/sys/class/power_supply/BAT0/status         =  Charging
+/sys/class/power_supply/BAT0/voltage_now    =  12900 mV
+/sys/class/power_supply/BAT0/current_now     =  2200 mA
+/sys/class/power_supply/BAT0/energy_now      =  38000 mWh
+/sys/class/power_supply/BAT0/energy_full     =  48000 mWh
+/sys/class/power_supply/BAT0/temperature     =  35 °C
+/sys/class/power_supply/BAT0/charge_full_design =  50000 mWh
+/sys/class/power_supply/BAT0/cycle_count     =  80
+
++++ Energy Usage
+Charge state:  Charging
+Battery energy:  38000 mWh
+Design capacity:  48000 mWh
+
++++ Power Management
+Runtime PM:           enabled
+Plugin: example
+Supported features: charge thresholds, recalibration
+Driver usage:
+* natacpi (example_acpi) = active (charge thresholds, recalibration)
+Parameter value ranges:
+* START_CHARGE_THRESH_BAT0/1:  0(off)..96(default)..99
+* STOP_CHARGE_THRESH_BAT0/1:   1..100(default)
+[...]
+/sys/class/power_supply/BAT0/charge_control_start_threshold =     75 [%]
+/sys/class/power_supply/BAT0/charge_control_end_threshold   =     80 [%]
+/sys/class/power_supply/BAT0/charge_behaviour               = [auto] inhibit-charge force-discharge"
+}
+
+##  Comment if you don't need it
+#Func_New_Status_Bat
+#------------------------------------------------------------------------------}
+
+
+if grep -q "No battery data available." <<< "$Status_Bat" ;then
+        GUI_Out=$( yad --center --title="Easy TLP Battery Settings." \
+        --image="info" \
+        --text="No battery data available." \
+        --button="gtk-ok:0" )
+        exit 0
+fi
+
+
+##  https://linrunner.de/tlp/settings/bc-vendors.html#unsupported-hardware
+Plugin=$(grep "Plugin:" <<< "$Status_Bat" | awk '{print $2}')
+    
+# If Plugin  = generic or is empty
+if [[ "$Plugin" == "generic" ]] || [[ -z "$Plugin" ]] ;then
+    Plugin="Battery Care = Unsupported."
+    
+    GUI_Out=$( yad --center --title="Easy TLP Battery Settings." \
+    --width=700 --height=450 \
+    --image="battery-symbolic" \
+    --form \
+    --field="tlp-stat --battery":TXT "$Status_Bat" \
+    --field="$Plugin":LBL \
+    --button="gtk-ok:0" )
+    
+else
+    Plugin="Battery Care = Supported."
+    TLP_Options=$(grep ^".[A-Z][A-Z]" /etc/tlp.conf)
+    Vol_Start=$(grep "START_CHARGE_THRESH_BAT0" <<< "$TLP_Options" | awk -F  '=' '{print $2}')
+    Vol_Stop=$( grep "STOP_CHARGE_THRESH_BAT0"  <<< "$TLP_Options" | awk -F  '=' '{print $2}' )
+    
+    if grep -q ^"START_CHARGE_THRESH_BAT0" <<< "$TLP_Options" ;then 
+        Status_Start="On"
+    else
+        Status_Start="Off"
+    fi
+    if grep -q ^"STOP_CHARGE_THRESH_BAT0" <<< "$TLP_Options" ;then 
+        Status_Stop="On"
+    else
+        Status_Stop="Off"
+    fi
+    
+#    echo "${Vol_Start} and ${Vol_Stop}"
+    
+    GUI_Out=$( yad  --center --title="Easy TLP Battery Settings." \
+    --width=700 --height=450 \
+    --image="battery-symbolic" \
+    --form \
+    --field="tlp-stat --battery":TXT "$Status_Bat" \
+    --field="$Plugin":LBL \
+    --field="Start charging status = $Status_Start":LBL \
+    --field="Start charging the battery %":SCL 0 0 "${Vol_Start}" \
+    --field="Stop charging status = $Status_Stop":LBL \
+    --field="End charging the battery %":SCL 0 "${Vol_Stop}" \
+    --field=" - Warning: \n    Incorrect charging thresholds can result in faster battery wear.":LBL  \
+    --button="Save To Settings And Exit!gtk-ok:10" \
+    --button="Turned Off Charge Thresh options!gtk-cancel:11" \
+    --button="gtk-cancel:1" \
+    --button="About!gtk-ok:0")
+    
+        Status_Out="$?"
+        
+Func_Restart_System() {
+    GUI_Out=$( yad --center --title="Easy TLP Battery Settings." \
+    --image="battery-symbolic" \
+    --form \
+    --field="Restart the system to restart TLP servise":LBL \
+    --button="I will do it alone!gtk-ok:0" )
+}
+        
+    case "$Status_Out" in
+	    "10")
+	        echo "New settings will saved."
+	        
+	        New_Vol_Start="$(awk -F  '|' '{print $4}' <<< "$GUI_Out")"
+	        New_Vol_Stop="$(awk -F  '|' '{print $6}' <<< "$GUI_Out")"
+	        echo "START_CHARGE_THRESH_BAT0=${New_Vol_Start}"
+	        echo "STOP_CHARGE_THRESH_BAT0=${New_Vol_Stop}"
+	        
+	        if [[ "$Status_Start" == "On" ]] ; then
+	            $(printf "${Permissions}") sed -i -e "s/START_CHARGE_THRESH_BAT0=.*/START_CHARGE_THRESH_BAT0=${New_Vol_Start}/" /etc/tlp.conf
+	        else
+	            $(printf "${Permissions}") sed -i -e "s/#START_CHARGE_THRESH_BAT0=.*/START_CHARGE_THRESH_BAT0=${New_Vol_Start}/" /etc/tlp.conf
+	        fi
+	        
+	        if [[ "$Status_Stop" == "On" ]] ; then
+	            $(printf "${Permissions}") sed -i -e "s/STOP_CHARGE_THRESH_BAT0=.*/STOP_CHARGE_THRESH_BAT0=${New_Vol_Stop}/" /etc/tlp.conf
+	        else
+	            $(printf "${Permissions}") sed -i -e "s/#STOP_CHARGE_THRESH_BAT0=.*/STOP_CHARGE_THRESH_BAT0=${New_Vol_Stop}/" /etc/tlp.conf
+	        fi
+	        
+	        Func_Restart_System
+	    ;;
+	    "11")  
+	        echo "Battery charge thresh will turned off"
+	        
+	        if [[ "$Status_Start" == "On" ]] ; then
+	            $(printf "${Permissions}") sed -i -e 's/START_CHARGE_THRESH_BAT0/#START_CHARGE_THRESH_BAT0/' /etc/tlp.conf
+	        fi
+	        if [[ "$Status_Stop" == "On" ]] ; then
+	            $(printf "${Permissions}") sed -i -e 's/STOP_CHARGE_THRESH_BAT0/#STOP_CHARGE_THRESH_BAT0/' /etc/tlp.conf
+	        fi
+	        
+	        Func_Restart_System
+	    ;;
+	    "1")
+	        echo "  The change to the settings was canceled by the user."
+            exit 0
+	    ;;
+	    "0")
+            echo help
+	    ;;
+	esac
+fi
+
+
+
+
+    
+    
+    
+    
