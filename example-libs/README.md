@@ -37,7 +37,7 @@ I recommend a more reliable method:
         #--------------------------{
         ##  Safeguard
         Source_If_Exist() {
-            if [[ -f "$1" ]] ; then
+            if [[ -f "${Path_Of_Script}/lib/${1}" ]] ; then
                 source "${Path_Of_Script}/lib/${1}"
             else
                 echo "Error: Source not found: $1" 1>&2

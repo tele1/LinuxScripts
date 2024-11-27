@@ -1,11 +1,17 @@
 #!/bin/bash
 
 
+#=============================================================================={
+##    Destiny:    Window for Graphical User Interface for " netmonit --catch-all-with-lsof "
+     VERSION="2" 
+##    Date:       2024.11.27 (Year.Month.Day) 
+##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
+##    Source:   "https://github.com/tele1/LinuxScripts"
+#==============================================================================}
 
 
 #Files_lsof=$(ls /var/log/netmonit/*.lsof | xargs -n 1 basename)
-Files_lsof=$(ls -1 /var/log/netmonit/*.lsof)
-
+Files_lsof=$(LC_ALL=C ls -1 -t /var/log/netmonit/*.lsof)
 
 #============================================{
 ##     Read data from *.lsof for yad window 
@@ -14,15 +20,15 @@ while read -r COLUMN_1 ; do
     Pid=$( basename "$COLUMN_1" )
     ##      Read data from .lsof file
     Proc_name=$( tail -n +2 "$COLUMN_1" | awk '{print $1 , $9}' )
-    Time_lsof=$( ls -l "$COLUMN_1" | awk '{print $8}' )
+    Time_lsof=$( ls -l --time-style="+%Y:%m:%d--%H:%M" "$COLUMN_1" | awk '{print $6}' )
     
     if [[ -z "$Proc_name" ]] ; then
         echo "Error: Proc_name variable is empty" ; exit 1
-    ##  elif more lines than 1
+    ##  Remove empty lines and elif more lines than 1
     elif [[ $(grep "\S" <<< "$Proc_name" | wc -l) -gt 1 ]] ; then
-    
+        Rest=""
         while read -r COL_1 ; do
-            Rest="$Rest $Pid $Time_lsof $COL_1"
+            Rest="$Rest $Pid ${Time_lsof}:one_file $COL_1"
         done <<< "$Proc_name"
         
         Set1="$Set1 $Rest"
@@ -37,9 +43,10 @@ done <<< "$Files_lsof"
 while [[ ! "$Code_Out" == "1" ]] && [[ ! "$Code_Out" == "252" ]] ; do
 
     Selected=$(yad --width=900 --height=400  --center --title "System Logout" \
-    --list --column="File"  --column="Time" --column="Name" --column="Connection" $Set1 \
+    --list --column="File/PID"  --column="Time" --column="Name" --column="Connection" $Set1 \
     --text "\n TIP: You can also select line and open lsof or pstree file. \n" \
-    --button="gtk-close":1 --button="Open .lsof":2 --button="Open .pstree":4)
+    --button="gtk-close":1 --button="Open .lsof":2 --button="Open .pstree":4 \
+    --button="Search tree of PID":6)
 
     Code_Out="$?"
     ##      For Debug in terminal
@@ -51,6 +58,35 @@ while [[ ! "$Code_Out" == "1" ]] && [[ ! "$Code_Out" == "252" ]] ; do
     elif [[ "$Code_Out" == "4" ]] ; then
         File_pstree=$(awk -F '.' '{print $1".pstree"}'  <<< "$Selected")
         xdg-open /var/log/netmonit/"$File_pstree"
+    elif [[ "$Code_Out" == "6" ]] ; then
+
+        PID=$( awk -F '.' '{print $1}' <<< "$Selected" )
+        echo "Selected PID = $PID"
+        
+        #---------------------------------------------{
+        ## Load lib for PROC_OF_PSTREE_2
+                
+        Path_Of_Script="$( dirname $( dirname "$(realpath $0)" ) )"
+
+        #--------------------------{
+        ##  Safeguard
+        Source_If_Exist() {
+            if [[ -f "${Path_Of_Script}/lib/${1}" ]] ; then
+                source "${Path_Of_Script}/lib/${1}"
+            else
+                echo "Error: Source not found: $1" 1>&2
+                echo "Path_Of_Script = ${Path_Of_Script}"
+                echo "${Path_Of_Script}/lib/${1}"
+                exit 1
+            fi
+        }
+        #--------------------------}
+        Source_If_Exist lib-pstree.bash
+        #---------------------------------------------}
+        
+        Output_Pstree=$( PROC_OF_PSTREE_2 "$PID" )
+        yad --text-info --center --width=900 --height=400 \
+        --button="gtk-cancel":1 <<< "$Output_Pstree"
     fi
     
 done
