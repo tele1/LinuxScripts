@@ -1,0 +1,105 @@
+#!/bin/bash
+ 
+#=============================================================================={
+##    Destiny:    To find recently installed files and packages .deb .
+     VERSION="1" 
+##    Date:       2024.12.16 (Year.Month.Day) 
+##    License:    GNU GPL v.3   http://www.gnu.org/licenses/gpl-3.0.en.html 
+##    Source:     https://github.com/tele1/LinuxScripts 
+##    Script usage:   bash find-last-installed 
+#==============================================================================}
+ 
+#=============================================================================={
+# Check Dependecies - List created automatically by find-bash-dep version=11 
+# source=https://github.com/tele1/LinuxScripts
+ 
+[[ -z $(type -P awk) ]] && DEP="$DEP"$'\n'"awk"
+[[ -z $(type -P date) ]] && DEP="$DEP"$'\n'"date"
+[[ -z $(type -P dpkg) ]] && DEP="$DEP"$'\n'"dpkg"
+[[ -z $(type -P echo) ]] && DEP="$DEP"$'\n'"echo"
+[[ -z $(type -P find) ]] && DEP="$DEP"$'\n'"find"
+[[ -z $(type -P uniq) ]] && DEP="$DEP"$'\n'"uniq"
+[[ -z $(type -P wc) ]] && DEP="$DEP"$'\n'"wc"
+ 
+# End script if exist any error
+[ -z "$DEP" ] || { echo "   Error: Missing dependencies, before run script please install: $DEP"  ; exit 1  ;}
+ 
+#     Used Packages: coreutils,dpkg,findutils,gawk,
+#=============================================================================={
+
+
+echo "--> From what date should I look for installed packages?"
+echo "      Write Year-Moth-Day , for example: 2024-12-00"
+read -p "       Write date:  " Date_from
+
+date -d "$Date_from" 
+    if [[ "$?" == "1" ]] ; then
+        echo "Error: The entered date is not valid."
+        exit 1
+    fi
+
+
+#---------------------------------------{
+#   #depends on local timezone,
+
+#   $ date -d '2024-12-02 14:27:04' +%s
+#   1733146024
+F_To_Epoch() 
+{
+    date -d "$1" +%s
+}
+
+#   date -d @1707891682 "+%Y-%m-%d %H:%M:%S"
+#  2024-02-14 07:21:22
+F_From_Epoch() 
+{
+    date -d @$1 "+%Y-%m-%d %H:%M:%S"
+}
+#---------------------------------------}
+
+
+echo "1. Searching for files:"
+
+#   Find files
+List_1=$( find /usr /opt -type f -exec stat --format='%W %n' {} + | sort -n )
+#   echo "$List_1"
+    Count=$( wc -l <<< "$List_1")
+    echo "  Files to check $Count" 
+
+
+#-----------------------------{
+echo "2. Searching for a package:"
+
+#-----
+# Change $Date_from to epoch
+Epoch_date=$( F_To_Epoch "$Date_from 00:00:00" )
+#    echo "$Epoch_date"
+#-----
+
+# Clear variable
+List_2=""
+Number=0
+
+while read -r COLUMN_1 COLUMN_2 ; do
+    Number=$(( "$Number" + 1 ))
+    echo -ne "$Number / $Count \r"
+    
+    if [[ "$COLUMN_1" -ge $Epoch_date ]] ; then
+        Package=$( LC_ALL=C dpkg -S $COLUMN_2  2>  /dev/null )
+            if [[ "$?" == "1" ]] ; then
+                Package="No package found containing: $COLUMN_2"
+                List_2_1+="$COLUMN_1 $Package"$'\n'
+            else
+                List_2_2+="$COLUMN_1 $Package"$'\n'
+            fi
+    fi
+done <<< "$List_1"
+#-----------------------------}
+
+echo "3. Sorting output:"
+echo "$List_2_1" | awk '$1 > 0 { $1 = strftime("%Y-%m-%d %H:%M:%S", $1); print $0 }'
+echo "$List_2_2" | awk '{ print $1, $2 }' | uniq | awk '$1 > 0 { $1 = strftime("%Y-%m-%d %H:%M:%S", $1); print $0 }'
+
+
+
+

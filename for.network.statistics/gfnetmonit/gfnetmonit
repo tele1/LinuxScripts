@@ -49,7 +49,7 @@ Func_win1() {
     --listen --menu="
     List!bash ${Relativ_Path}/data/bin/win2
     Logs!xdg-open /var/log/netmonit
-    Close This Window
+    Close This Menu
     Close App!quit" \
     --separator="\\n" \
     
