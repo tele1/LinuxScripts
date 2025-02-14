@@ -3,7 +3,7 @@
 
 ##      Developed for Linux
 ##      License: GNU GPL v.3		http://www.gnu.org/licenses/gpl-3.0.en.html
-        VERSION='6'
+        VERSION='7'
 ##      Destiny: To show how many packages do you have installed
 ##      Script usage: bash script_name
 
@@ -15,29 +15,84 @@
 ##      This means that additional applications can only be
 ##       visible from this second shell.
 ##
+##      Example output of this script:
+##
+##          $ bash how-many-apps-installed
+##          Installed packages:
+##          ==================
+##          apt = 3455
+##          flatpak = 0
+##          snap = 22
+##          AppImages = 1
+##          cargo = 45
+##          npm = 0
+##          pip = 457
+##          pipx = 1
+##       
+##          Number of all commands: 7272 
+##       
+##============================
+
 
 echo "Installed packages:"
 echo "=================="
 
-#------------------------{
-##   System managers:
+#-------------------------------------------------------------------{
+##   Managers specific for a given system:
 
-#  For Fedora
-[[ ! -z $(type -P dnf) ]] && DNF=$(dnf list installed | wc -l) && echo "dnf = $DNF"
+# "Alpine Package Keeper" for Alpine Linux  https://wiki.alpinelinux.org/wiki/Alpine_Package_Keeper
+[[ ! -z $(type -P apk) ]] && Apk=$(apk list -I | wc -l) && echo "apk = $Apk"
 
 #  For based on Debian 
 [[ ! -z $(type -P apt) ]] && APT=$(apt list --installed 2>/dev/null | sed '1d' | wc -l) && echo "apt = $APT"
+
+# Mac using Homebrew brew list
+[[ ! -z $(type -P brew) ]] && Brew=$(brew list | wc -l) && echo "brew = $Brew"
+
+# For Cygwin
+[[ ! -z $(type -P cygcheck) ]] && Cygcheck=$(cygcheck --check-setup --dump-only * | wc -l) && echo "cygcheck = $Cygcheck"
+
+# The package manager of the Solus project, a rolling-release Linux distribution
+[[ ! -z $(type -P eopkg) ]] && Eopkg=$(eopkg list-installed | wc -l) && echo "eopkg = $Eopkg"
+
+#------------{
+#  For Gentoo
+[[ ! -z $(type -P equery) ]] && Equery=$(equery list | wc -l) && echo "Equery = $Equery"
+
+# Part of the Portage package management system in Gentoo
+[[ ! -z $(type -P qlist) ]] && Qlist=$(qlist -Iv | wc -l) && echo "brew = $Qlist"
+#------------}
+
+# GNU Guix is the default package manager of the GNU Guix System distribution
+[[ ! -z $(type -P guix) ]] && Guix=$(guix package -I | wc -l) && echo "guix = $Guix"
+
+# Nix is a package manager from NixOS Linux distribution
+[[ ! -z $(type -P nix-env) ]] && Nixenv=$(nix-env -q | wc -l) && echo "nix-env = $Nixenv"
+
+# OpenWrt
+[[ ! -z $(type -P opkg) ]] && Opkg=$(opkg list-installed | wc -l) && echo "opkg = $Opkg"
 
 #  For based on Arch Linux
 [[ ! -z $(type -P pacman) ]] && PAC=$(pacman -Qn | wc -l) && echo "pacman = $PAC"
 
 [[ ! -z $(type -P pacman) ]] && AUR=$(pacman -Qm | wc -l) && echo "AUR = $AUR"
 
+#  For FreeBSD
+[[ ! -z $(type -P pkg) ]] && PKG_info=$(pkg info | wc -l) && echo "pkg = $PKG_info"
+
+# Used by Haiku OS
+[[ ! -z $(type -P pkgman) ]] && Pkgman=$(pkgman search -i -a | wc -l) && echo "pkgman = $Pkgman"
+
+# Used by Crux OS
+[[ ! -z $(type -P prt-get) ]] && Prtget=$(prt-get listinst | wc -l) && echo "prt-get = $Prtget"
+
 #  For example: Fedora, OpenSuse
 [[ ! -z $(type -P rpm) ]] && RPM=$(rpm -qa | wc -l) && echo "rpm = $RPM"
 
-# yum list --installed = list rpm only for Fedora
-# zypper search -i = list rpm only for OpenSuse
+#   Skipped because they use rpm
+#   yum list --installed            = list rpm only for Fedora
+#   dnf list installed | wc -l      = list rpm only for Fedora
+#   zypper search -i                = list rpm only for OpenSuse
 
 #  For based on Slackware
 [[ ! -z $(type -P slapt-get) ]] && Slackware=$(slapt-get --installed | wc -l) && echo "Slackware b. = $Slackware"
@@ -45,16 +100,10 @@ echo "=================="
 # Slackware OS
 [[ -d "/var/log/packages" ]] && Slackware=$(ls -1 /var/log/packages | wc -l) && echo "Slackware = $Slackware"
 
-#  For FreeBSD
-[[ ! -z $(type -P pkg) ]] && PKG_info=$(pkg info | wc -l) && echo "pkg = $PKG_info"
+# Void Linux OS
+[[ ! -z $(type -P xbps-query) ]] && Xbps=$(xbps-query -l | wc -l) && echo "xbps-query = $Xbps"
 
-#  For Gentoo
-[[ ! -z $(type -P equery) ]] && Equery=$(equery list | wc -l) && echo "Equery = $Equery"
-
-# For Cygwin
-[[ ! -z $(type -P cygcheck) ]] && Cygcheck=$(cygcheck --check-setup --dump-only * | wc -l) && echo "cygcheck = $Cygcheck"
-
-#------------------------}
+#-------------------------------------------------------------------}
 
 #---------------------------------{
 ##   Portable package managers:
@@ -69,66 +118,44 @@ Count_AppImages=$(locate "AppImage.config" | grep "config"$ | wc -l)
 
 #---------------------------------}
 
-#--------------------------------------{
+#-------------------------------------------------------------------{
 ##   Other package managers:
-
-[[ ! -z $(type -P pip) ]] && PIP=$(pip list | wc -l) && echo "pip = $PIP"
-
-[[ ! -z $(type -P npm) ]] && NPM=$(npm ls --parseable | grep -v '/home' | wc -l) && echo "npm = $NPM"
-
-#  JavaScript package manager , alternative to the npm
-[[ ! -z $(type -P yarn) ]] && Yarn=$(yarn global list | wc -l) && echo "yarn = $Yarn"
-
-#  For Rust
-[[ ! -z $(type -P cargo) ]] && Cargo=$(cargo  --list | wc -l) && echo "cargo = $Cargo"
-
-# Anaconda, conda, miniconda, 
-[[ ! -z $(type -P conda) ]] && Conda=$(conda list | grep -v ^'#' | wc -l) && echo "conda = $Conda"
-
-# asdf is a CLI tool that can manage multiple language runtime versions
-[[ ! -z $(type -P asdf) ]] && Asdf=$(asdf latest --all | wc -l) && echo "asdf = $Asdf"
-
-
-[[ ! -z $(type -P postinstallerf) ]] && echo "postinstallerf = app with GUI"
 
 # Alternative for Ubuntu Software Center
 [[ ! -z $(type -P appgrid) ]] && echo "appgrid = app with GUI"
 
-# UPT - Universal Package-management Tool
-[[ ! -z $(type -P upt) ]] && Upt=$(upt list | wc -l) && echo "upt = $Upt"
-
-# "Alpine Package Keeper"
-[[ ! -z $(type -P apk) ]] && Apk=$(apk list -I | wc -l) && echo "apk = $Apk"
-
-# Mac using Homebrew brew list
-[[ ! -z $(type -P brew) ]] && Brew=$(brew list | wc -l) && echo "brew = $Brew"
+# asdf is a CLI tool that can manage multiple language runtime versions
+[[ ! -z $(type -P asdf) ]] && Asdf=$(asdf latest --all | wc -l) && echo "asdf = $Asdf"
 
 # cards list 
 [[ ! -z $(type -P cards) ]] && echo "cards app found, but I don't know what it is. Node.js projects?"
-[[ ! -z $(type -P cards) ]] && Cards=$(cards list | wc -l) && echo "cards = $Brew"
+[[ ! -z $(type -P cards) ]] && Cards=$(cards list | wc -l) && echo "cards = $Cards"
+
+#  For Rust
+[[ ! -z $(type -P cargo) ]] && Cargo=$(cargo  --list | wc -l) && echo "cargo = $Cargo"
+
+# Anaconda, conda, miniconda https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html
+[[ ! -z $(type -P conda) ]] && Conda=$(conda list | grep -v ^'#' | wc -l) && echo "conda = $Conda"
+
+#   Node.js and the JavaScript manager
+[[ ! -z $(type -P npm) ]] && NPM=$(npm ls --parseable | grep -v '/home' | wc -l) && echo "npm = $NPM"
+
+#   Python manager https://pip.pypa.io/en/stable/
+[[ ! -z $(type -P pip) ]] && PIP=$(pip list | wc -l) && echo "pip = $PIP"
+
+#   Python manager https://pipx.pypa.io/latest/
+[[ ! -z $(type -P pipx) ]] && PIPX=$(pipx list 2> /dev/null | grep "\- " | wc -l ) && echo "pipx = $PIPX"
+
+#   Fedora
+[[ ! -z $(type -P postinstallerf) ]] && echo "postinstallerf = app with GUI"
+
+# UPT - Universal Package-management Tool
+[[ ! -z $(type -P upt) ]] && Upt=$(upt list | wc -l) && echo "upt = $Upt"
+
+#  JavaScript package manager , alternative to the npm
+[[ ! -z $(type -P yarn) ]] && Yarn=$(yarn global list | wc -l) && echo "yarn = $Yarn"
 
 # choco list = only for W. system
-
-# Part of the Portage package management system in Gentoo
-[[ ! -z $(type -P qlist) ]] && Qlist=$(qlist -Iv | wc -l) && echo "brew = $Qlist"
-
-# The package manager of the Solus project, a rolling-release Linux distribution
-[[ ! -z $(type -P eopkg) ]] && Eopkg=$(eopkg list-installed | wc -l) && echo "eopkg = $Eopkg"
-
-# GNU Guix is the default package manager of the GNU Guix System distribution
-[[ ! -z $(type -P guix) ]] && Guix=$(guix package -I | wc -l) && echo "guix = $Guix"
-
-# Nix is a package manager from NixOS Linux distribution
-[[ ! -z $(type -P nix-env) ]] && Nixenv=$(nix-env -q | wc -l) && echo "nix-env = $Nixenv"
-
-# OpenWrt
-[[ ! -z $(type -P opkg) ]] && Opkg=$(opkg list-installed | wc -l) && echo "opkg = $Opkg"
-
-# Used by Haiku OS
-[[ ! -z $(type -P pkgman) ]] && Pkgman=$(pkgman search -i -a | wc -l) && echo "pkgman = $Pkgman"
-
-# Used by Crux OS
-[[ ! -z $(type -P prt-get) ]] && Prtget=$(prt-get listinst | wc -l) && echo "prt-get = $Prtget"
 
 # scoop list = Scoop is a command-line installer for W.
 
@@ -136,13 +163,11 @@ Count_AppImages=$(locate "AppImage.config" | grep "config"$ | wc -l)
 
 # winget list = W. Package Manager
 
-# Void Linux OS
-[[ ! -z $(type -P xbps-query) ]] && Xbps=$(xbps-query -l | wc -l) && echo "xbps-query = $Xbps"
-
-#--------------------------------------}
+#-------------------------------------------------------------------}
 
 #-------------------------------{
 echo " "
 echo " Number of all commands: $(compgen -c | wc -l) "
 #-------------------------------}
+
 
